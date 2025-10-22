@@ -1,0 +1,32 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>TigerTagScale – Web Flasher</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; line-height: 1.5; }
+      .card { max-width: 680px; margin: 0 auto; padding: 24px; border: 1px solid #ddd; border-radius: 12px; }
+      h1 { margin-top: 0; }
+      .req { background: #fff7cc; border: 1px solid #ffe58f; padding: 12px; border-radius: 8px; }
+      footer { margin-top: 24px; font-size: 12px; opacity: .8; }
+    </style>
+    <script type="module" src="https://unpkg.com/esp-web-tools@9.4.0/dist/web/install-button.js?module"></script>
+  </head>
+  <body>
+    <div class="card">
+      <h1>TigerTagScale – ESP32 Web Flasher</h1>
+      <p>Flash the firmware to your ESP32 directly from your browser.</p>
+      <div class="req">
+        <strong>Requirements:</strong> Use Google Chrome / Microsoft Edge on desktop. Plug the ESP32 via USB.
+        If nothing appears, install the USB driver for your board (CP210x/CH340).
+      </div>
+      <p style="margin:16px 0;">
+        <esp-web-install-button manifest="manifest.json"></esp-web-install-button>
+      </p>
+      <p>If the button is disabled, your browser may not support Web Serial. Try Chrome/Edge on Windows, macOS, or Linux.</p>
+      <footer>© TigerTag / Atome3D – This page flashes: bootloader, partitions, boot_app0, and app.</footer>
+    </div>
+  </body>
+</html>

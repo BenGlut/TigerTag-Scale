@@ -163,10 +163,13 @@
       }
       
       .lead { 
-        color: var(--muted); 
+        color: #64748b;
         margin: 0 0 20px;
         font-size: 17px;
-        opacity: 0.9;
+      }
+      
+      [data-theme="dark"] .lead {
+        color: var(--muted);
       }
       
       .grid { 
@@ -439,8 +442,11 @@
       .cart-cta-content p {
         margin: 0;
         font-size: 14px;
+        color: #64748b;
+      }
+      
+      [data-theme="dark"] .cart-cta-content p {
         color: var(--muted);
-        opacity: 0.9;
       }
       
       .cart-cta-btn {
@@ -535,8 +541,11 @@
       .cart-subtitle {
         margin: 4px 0 0 0;
         font-size: 13px;
+        color: #64748b;
+      }
+      
+      [data-theme="dark"] .cart-subtitle {
         color: var(--muted);
-        opacity: 0.8;
       }
       
       .cart-close {

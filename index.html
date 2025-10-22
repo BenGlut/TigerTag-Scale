@@ -278,18 +278,27 @@
         background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
         color: white;
         border: none;
-        padding: 16px 40px;
+        padding: 20px 50px;
         border-radius: 16px;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 600;
         cursor: pointer;
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
         transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
       
       esp-web-install-button::part(button):hover {
-        transform: translateY(-2px);
+        transform: translateY(-3px);
         box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+      }
+      
+      @media (max-width: 640px) {
+        esp-web-install-button::part(button) {
+          padding: 18px 40px;
+          font-size: 18px;
+        }
       }
       
       .small { font-size: 14px; }
@@ -710,8 +719,12 @@
       }
       
       .summary-row .summary-label {
-        color: var(--muted);
+        color: #64748b;
         font-weight: 600;
+      }
+      
+      [data-theme="dark"] .summary-row .summary-label {
+        color: var(--muted);
       }
       
       .summary-row .summary-value {
@@ -997,7 +1010,7 @@
         </details>
 
         <footer>
-          <strong>TigerTag.io</strong> — ESP32 Web Installer via ESP Web Tools
+          <a href="https://tigertag.io" target="_blank" rel="noopener"><strong>TigerTag.io</strong></a> — ESP32 Web Installer via ESP Web Tools
         </footer>
       </div>
     </div>
@@ -1100,14 +1113,6 @@
           <div class="summary-row">
             <span class="summary-label">Total Components:</span>
             <span class="summary-value">5 types</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Estimated Cost:</span>
-            <span class="summary-value">$60-80</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Build Time:</span>
-            <span class="summary-value">1-2 hours</span>
           </div>
         </div>
       </div>

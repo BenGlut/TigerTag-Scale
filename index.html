@@ -630,9 +630,12 @@
       .cart-item-desc {
         margin: 0 0 8px 0;
         font-size: 12px;
-        color: var(--muted);
-        opacity: 0.9;
+        color: #64748b;
         line-height: 1.4;
+      }
+      
+      [data-theme="dark"] .cart-item-desc {
+        color: var(--muted);
       }
       
       .cart-item-specs {
@@ -809,7 +812,8 @@
       function initTheme() {
         const savedTheme = localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        // Default to dark mode if no saved preference
+        const theme = savedTheme || 'dark';
         setTheme(theme);
       }
       

@@ -433,6 +433,19 @@
         border: 2px solid rgba(102, 126, 234, 0.3);
         border-radius: 16px;
         padding: 24px;
+        margin: 24px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      
+      .wiring-cta {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+        border: 2px solid rgba(16, 185, 129, 0.3);
+        border-radius: 16px;
+        padding: 24px;
         margin: 24px 0 32px 0;
         display: flex;
         align-items: center;
@@ -441,20 +454,23 @@
         flex-wrap: wrap;
       }
       
-      .cart-cta-content h3 {
+      .cart-cta-content h3,
+      .wiring-cta-content h3 {
         margin: 0 0 4px 0;
         font-size: 20px;
         font-weight: 700;
         color: var(--card-text);
       }
       
-      .cart-cta-content p {
+      .cart-cta-content p,
+      .wiring-cta-content p {
         margin: 0;
         font-size: 14px;
         color: #64748b;
       }
       
-      [data-theme="dark"] .cart-cta-content p {
+      [data-theme="dark"] .cart-cta-content p,
+      [data-theme="dark"] .wiring-cta-content p {
         color: var(--muted);
       }
       
@@ -478,6 +494,32 @@
       .cart-cta-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 12px 28px rgba(102, 126, 234, 0.4);
+      }
+      
+      .wiring-cta-btn {
+        background: linear-gradient(135deg, var(--ok) 0%, #059669 100%);
+        color: white;
+        border: none;
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+      }
+      
+      .wiring-cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(16, 185, 129, 0.4);
+      }
+      
+      .wiring-cta-btn::after {
+        display: none;
       }
       
       .cart-badge {
@@ -737,11 +779,13 @@
         .cart-sidebar {
           max-width: 100%;
         }
-        .cart-cta {
+        .cart-cta,
+        .wiring-cta {
           flex-direction: column;
           text-align: center;
         }
-        .cart-cta-btn {
+        .cart-cta-btn,
+        .wiring-cta-btn {
           width: 100%;
           justify-content: center;
         }
@@ -953,6 +997,16 @@
             View Shopping List
             <span class="cart-badge">5 items</span>
           </button>
+        </div>
+
+        <div class="wiring-cta">
+          <div class="wiring-cta-content">
+            <h3>📋 Wiring Instructions</h3>
+            <p>Complete hardware pinout and connection guide</p>
+          </div>
+          <a href="wiring-guide.html" class="wiring-cta-btn">
+            View Wiring Guide →
+          </a>
         </div>
 
         <h2>🚀 Installation Steps</h2>

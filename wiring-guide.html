@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>TigerTag Scale – Web Installer (ESP32)</title>
+    <meta name="description" content="Easily flash your TigerTag Scale ESP32 from your browser (Chrome/Edge) using ESP Web Tools."/>
+    <style>
+      :root { 
+        --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --fg: #ffffff;
+        --muted: #e0e7ff;
+        --card: rgba(255, 255, 255, 0.95);
+        --card-text: #1e293b;
+        --border: rgba(255, 255, 255, 0.2);
+        --accent: #667eea;
+        --accent-bright: #8b5cf6;
+        --ok: #10b981;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+        --shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      
+      [data-theme="dark"] {
+        --bg: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        --fg: #f8fafc;
+        --muted: #cbd5e1;
+        --card: rgba(15, 23, 42, 0.95);
+        --card-text: #f8fafc;
+        --border: rgba(148, 163, 184, 0.2);
+      }
+      
+      [data-theme="light"] {
+        --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --fg: #ffffff;
+        --muted: #e0e7ff;
+        --card: rgba(255, 255, 255, 0.95);
+        --card-text: #1e293b;
+        --border: rgba(255, 255, 255, 0.2);
+      }
+      
+      * { box-sizing: border-box; }
+      
+      html, body { 
+        height: 100%; 
+        margin: 0;
+        overflow-x: hidden;
+      }
+      
+      body { 
+        background: var(--bg);
+        background-attachment: fixed;
+        color: var(--fg); 
+        font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+        position: relative;
+      }
+      
+      /* Animated background particles */
+      .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 0;
+        pointer-events: none;
+      }
+      
+      .particle {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 20s infinite ease-in-out;
+      }
+      
+      .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
+      .particle:nth-child(2) { width: 120px; height: 120px; left: 70%; animation-delay: 2s; }
+      .particle:nth-child(3) { width: 60px; height: 60px; left: 40%; animation-delay: 4s; }
+      .particle:nth-child(4) { width: 100px; height: 100px; left: 85%; animation-delay: 6s; }
+      .particle:nth-child(5) { width: 90px; height: 90px; left: 25%; animation-delay: 8s; }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(100vh) scale(1); opacity: 0; }
+        10% { opacity: 0.3; }
+        50% { transform: translateY(-20vh) scale(1.2); opacity: 0.2; }
+        90% { opacity: 0.3; }
+      }
+      
+      .wrap { 
+        max-width: 920px; 
+        margin: 0 auto; 
+        padding: 40px 20px 60px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .card { 
+        background: var(--card);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border);
+        border-radius: 24px; 
+        padding: 40px;
+        box-shadow: var(--shadow);
+        animation: slideUp 0.6s ease-out;
+        color: var(--card-text);
+      }
+      
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      
+      .logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        border-radius: 20px;
+        margin-bottom: 20px;
+        font-size: 36px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        animation: pulse 2s infinite ease-in-out;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      
+      h1 { 
+        margin: 0 0 12px; 
+        font-size: clamp(28px, 4vw, 36px);
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      h2 { 
+        margin: 32px 0 16px; 
+        font-size: 22px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      h2::before {
+        content: '';
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        border-radius: 2px;
+      }
+      
+      .lead { 
+        color: #64748b;
+        margin: 0 0 20px;
+        font-size: 17px;
+      }
+      
+      [data-theme="dark"] .lead {
+        color: var(--muted);
+      }
+      
+      .grid { 
+        display: grid; 
+        gap: 16px; 
+        grid-template-columns: 1fr;
+        margin: 24px 0;
+      }
+      
+      @media (min-width: 720px) { 
+        .grid { grid-template-columns: 1fr 1fr; } 
+      }
+      
+      .badge { 
+        display: inline-flex; 
+        gap: 10px; 
+        align-items: center; 
+        padding: 12px 18px; 
+        border-radius: 16px; 
+        font-size: 14px;
+        font-weight: 500;
+        border: 2px solid;
+        transition: all 0.3s ease;
+        animation: fadeIn 0.5s ease-out;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      
+      .badge.ok { 
+        background: rgba(16, 185, 129, 0.1); 
+        border-color: var(--ok);
+        color: var(--ok);
+      }
+      
+      .badge.warn { 
+        background: rgba(245, 158, 11, 0.1); 
+        border-color: var(--warn);
+        color: var(--warn);
+      }
+      
+      .badge.danger { 
+        background: rgba(239, 68, 68, 0.1); 
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+      
+      .badge.muted {
+        background: rgba(148, 163, 184, 0.1);
+        border-color: rgba(148, 163, 184, 0.3);
+        color: #64748b;
+      }
+      
+      .list { 
+        margin: 16px 0 0 0; 
+        padding-left: 24px;
+      }
+      
+      .list li {
+        margin: 10px 0;
+        padding-left: 8px;
+      }
+      
+      .list li strong {
+        color: var(--accent);
+      }
+      
+      .callout { 
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        padding: 16px 20px; 
+        border-radius: 16px;
+        margin: 24px 0;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+      }
+      
+      .callout::before {
+        content: '💡';
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      
+      .hr { 
+        height: 2px; 
+        background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.3), transparent);
+        margin: 32px 0; 
+        border: 0;
+      }
+      
+      .center { 
+        display: flex; 
+        justify-content: center; 
+        margin: 32px 0;
+      }
+      
+      esp-web-install-button {
+        --esp-tools-button-color: #ffffff;
+        --esp-tools-button-text-color: #667eea;
+      }
+      
+      esp-web-install-button::part(button) {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        color: white;
+        border: none;
+        padding: 20px 50px;
+        border-radius: 16px;
+        font-size: 20px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      
+      esp-web-install-button::part(button):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+      }
+      
+      @media (max-width: 640px) {
+        esp-web-install-button::part(button) {
+          padding: 18px 40px;
+          font-size: 18px;
+        }
+      }
+      
+      .small { font-size: 14px; }
+      
+      details { 
+        border: 2px dashed rgba(148, 163, 184, 0.3);
+        border-radius: 16px; 
+        padding: 16px 20px;
+        margin: 16px 0;
+        transition: all 0.3s ease;
+      }
+      
+      details:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        background: rgba(102, 126, 234, 0.05);
+      }
+      
+      details[open] {
+        background: rgba(102, 126, 234, 0.08);
+        border-color: rgba(102, 126, 234, 0.4);
+      }
+      
+      summary { 
+        cursor: pointer; 
+        font-weight: 600;
+        padding: 4px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      summary::before {
+        content: '▶';
+        transition: transform 0.3s ease;
+        color: var(--accent);
+      }
+      
+      details[open] summary::before {
+        transform: rotate(90deg);
+      }
+      
+      a { 
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+      
+      a::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: var(--accent);
+        transition: width 0.3s ease;
+      }
+      
+      a:hover::after {
+        width: 100%;
+      }
+      
+      footer { 
+        margin-top: 40px;
+        padding-top: 24px;
+        border-top: 2px solid rgba(148, 163, 184, 0.2);
+        opacity: 0.8; 
+        font-size: 13px; 
+        text-align: center;
+      }
+      
+      code { 
+        background: rgba(148, 163, 184, 0.15);
+        padding: 3px 8px; 
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+        color: var(--accent);
+        font-weight: 500;
+      }
+      
+      .mono { 
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+      
+      /* Step cards */
+      .steps {
+        display: grid;
+        gap: 16px;
+        margin: 20px 0;
+      }
+      
+      .step {
+        display: flex;
+        gap: 16px;
+        padding: 16px;
+        background: rgba(102, 126, 234, 0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+        transition: all 0.3s ease;
+      }
+      
+      .step:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-color: rgba(102, 126, 234, 0.3);
+        transform: translateX(4px);
+      }
+      
+      .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        color: white;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 16px;
+        flex-shrink: 0;
+      }
+      
+      .step-content {
+        flex: 1;
+      }
+      
+      /* Bill of Materials - Shopping Cart */
+      .cart-cta {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin: 24px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      
+      .wiring-cta {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+        border: 2px solid rgba(16, 185, 129, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin: 24px 0 32px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      
+      .cart-cta-content h3,
+      .wiring-cta-content h3 {
+        margin: 0 0 4px 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--card-text);
+      }
+      
+      .cart-cta-content p,
+      .wiring-cta-content p {
+        margin: 0;
+        font-size: 14px;
+        color: #64748b;
+      }
+      
+      [data-theme="dark"] .cart-cta-content p,
+      [data-theme="dark"] .wiring-cta-content p {
+        color: var(--muted);
+      }
+      
+      .cart-cta-btn {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        color: white;
+        border: none;
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+      }
+      
+      .cart-cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(102, 126, 234, 0.4);
+      }
+      
+      .wiring-cta-btn {
+        background: linear-gradient(135deg, var(--ok) 0%, #059669 100%);
+        color: white;
+        border: none;
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+      }
+      
+      .wiring-cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(16, 185, 129, 0.4);
+      }
+      
+      .wiring-cta-btn::after {
+        display: none;
+      }
+      
+      .cart-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      
+      /* Cart Overlay */
+      .cart-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 999;
+      }
+      
+      .cart-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+      
+      /* Cart Sidebar */
+      .cart-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 100%;
+        max-width: 480px;
+        height: 100vh;
+        background: var(--card);
+        box-shadow: -8px 0 40px rgba(0, 0, 0, 0.3);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .cart-sidebar.active {
+        transform: translateX(0);
+      }
+      
+      .cart-header {
+        padding: 24px;
+        border-bottom: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+      }
+      
+      .cart-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--card-text);
+      }
+      
+      .cart-subtitle {
+        margin: 4px 0 0 0;
+        font-size: 13px;
+        color: #64748b;
+      }
+      
+      [data-theme="dark"] .cart-subtitle {
+        color: var(--muted);
+      }
+      
+      .cart-close {
+        background: rgba(239, 68, 68, 0.1);
+        border: 2px solid rgba(239, 68, 68, 0.3);
+        color: var(--danger);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+      }
+      
+      .cart-close:hover {
+        background: rgba(239, 68, 68, 0.2);
+        transform: rotate(90deg);
+      }
+      
+      .cart-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      
+      .cart-content::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      .cart-content::-webkit-scrollbar-track {
+        background: rgba(148, 163, 184, 0.1);
+      }
+      
+      .cart-content::-webkit-scrollbar-thumb {
+        background: rgba(102, 126, 234, 0.3);
+        border-radius: 4px;
+      }
+      
+      .cart-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(102, 126, 234, 0.5);
+      }
+      
+      .cart-item {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+        border: 2px solid rgba(102, 126, 234, 0.15);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: start;
+        transition: all 0.3s ease;
+      }
+      
+      .cart-item:hover {
+        border-color: rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        transform: translateX(-4px);
+      }
+      
+      .cart-item-icon {
+        font-size: 32px;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        border-radius: 10px;
+        flex-shrink: 0;
+      }
+      
+      .cart-item-details {
+        flex: 1;
+        min-width: 0;
+      }
+      
+      .cart-item-title {
+        margin: 0 0 4px 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--card-text);
+      }
+      
+      .cart-item-desc {
+        margin: 0 0 8px 0;
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.4;
+      }
+      
+      [data-theme="dark"] .cart-item-desc {
+        color: var(--muted);
+      }
+      
+      .cart-item-specs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      
+      .spec-tag {
+        background: rgba(102, 126, 234, 0.15);
+        color: var(--accent);
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+      }
+      
+      .cart-item-btn {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+      }
+      
+      .cart-item-btn::after {
+        display: none;
+      }
+      
+      .cart-item-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+      
+      .cart-footer {
+        padding: 20px;
+        border-top: 2px solid var(--border);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+      }
+      
+      .cart-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+      }
+      
+      .summary-row .summary-label {
+        color: #64748b;
+        font-weight: 600;
+      }
+      
+      [data-theme="dark"] .summary-row .summary-label {
+        color: var(--muted);
+      }
+      
+      .summary-row .summary-value {
+        color: var(--card-text);
+        font-weight: 700;
+        font-size: 15px;
+      }
+      
+      @media (max-width: 640px) {
+        .cart-sidebar {
+          max-width: 100%;
+        }
+        .cart-cta,
+        .wiring-cta {
+          flex-direction: column;
+          text-align: center;
+        }
+        .cart-cta-btn,
+        .wiring-cta-btn {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+      
+      @media (max-width: 640px) {
+        .card { padding: 28px 20px; }
+        .header { margin-bottom: 30px; }
+        h1 { font-size: 26px; }
+      }
+      
+      /* Theme Toggle */
+      .theme-toggle {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 1000;
+        background: var(--card);
+        backdrop-filter: blur(20px);
+        border: 2px solid var(--border);
+        border-radius: 50px;
+        padding: 8px;
+        display: flex;
+        gap: 4px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        animation: slideDown 0.5s ease-out;
+      }
+      
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      .theme-btn {
+        background: transparent;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+      
+      .theme-btn:hover {
+        transform: scale(1.1);
+      }
+      
+      .theme-btn.active {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+      
+      .theme-btn.active::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+        z-index: -1;
+        opacity: 0.3;
+        animation: glow 2s infinite;
+      }
+      
+      @keyframes glow {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.1); }
+      }
+      
+      @media (max-width: 640px) {
+        .theme-toggle {
+          top: 16px;
+          right: 16px;
+          padding: 6px;
+        }
+        .theme-btn {
+          width: 36px;
+          height: 36px;
+          font-size: 18px;
+        }
+      }
+    </style>
+    <script type="module" src="https://unpkg.com/esp-web-tools@9.4.0/dist/web/install-button.js?module"></script>
+    <script>
+      // Theme Management
+      function initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Default to dark mode if no saved preference
+        const theme = savedTheme || 'dark';
+        setTheme(theme);
+      }
+      
+      function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        updateThemeButtons(theme);
+      }
+      
+      function updateThemeButtons(theme) {
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
+      }
+      
+      function toggleTheme(theme) {
+        setTheme(theme);
+      }
+      
+      // Shopping Cart Toggle
+      function toggleCart() {
+        const sidebar = document.getElementById('cartSidebar');
+        const overlay = document.getElementById('cartOverlay');
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        // Prevent body scroll when cart is open
+        if (sidebar.classList.contains('active')) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
+        }
+      }
+      
+      // Close cart on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const sidebar = document.getElementById('cartSidebar');
+          if (sidebar.classList.contains('active')) {
+            toggleCart();
+          }
+        }
+      });
+      
+      // UI: detect Web Serial + firmware
+      async function init() {
+        initTheme();
+        
+        const flag = document.getElementById('compat');
+        const supported = 'serial' in navigator;
+        flag.innerHTML = supported
+          ? '<span class="badge ok">✓ Compatible Web Serial</span>'
+          : '<span class="badge danger">✕ Incompatible browser (use Chrome or Edge on desktop)</span>';
+        // Vérifier la présence du manifest et des binaires
+        const status = document.getElementById('fwcheck');
+        try {
+          const res = await fetch('manifest.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('manifest not found');
+          const m = await res.json();
+          const parts = (m.builds?.[0]?.parts)||[];
+          const checks = await Promise.all(parts.map(async p => {
+            const r = await fetch(p.path, { method: 'HEAD', cache: 'no-store' });
+            return { path: p.path, ok: r.ok };
+          }));
+          const okAll = checks.every(c => c.ok);
+          status.innerHTML = okAll
+            ? '<span class="badge ok">✅ Firmware ready</span>'
+            : '<span class="badge warn">⚠️ Firmware incomplete</span>';
+          const list = document.getElementById('fwlist');
+          list.innerHTML = checks.map(c => `<li class="mono">${c.ok ? '✅' : '❌'} ${c.path}</li>`).join('');
+        } catch (e) {
+          status.innerHTML = '<span class="badge danger">❌ manifest.json missing</span>';
+        }
+      }
+      window.addEventListener('DOMContentLoaded', init);
+    </script>
+  </head>
+  <body>
+    <div class="theme-toggle">
+      <button class="theme-btn" data-theme="light" onclick="toggleTheme('light')" title="Light Mode">
+        ☀️
+      </button>
+      <button class="theme-btn" data-theme="dark" onclick="toggleTheme('dark')" title="Dark Mode">
+        🌙
+      </button>
+    </div>
+    
+    <div class="particles">
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+    </div>
+    
+    <div class="wrap">
+      <div class="card">
+        <div class="header">
+          <div class="logo">🐯</div>
+          <h1>TigerTag Scale — Web Installer</h1>
+          <p class="lead">Flash your ESP32 directly from the browser. <em>Chrome / Edge on desktop</em></p>
+        </div>
+        
+        <div class="grid">
+          <div id="compat" class="muted badge">🔍 Checking browser...</div>
+          <div id="fwcheck" class="muted badge">📦 Checking firmware...</div>
+        </div>
+
+        <div class="cart-cta">
+          <div class="cart-cta-content">
+            <h3>🛒 Need to buy components?</h3>
+            <p>View the complete shopping list for building your TigerTag Scale</p>
+          </div>
+          <button class="cart-cta-btn" onclick="toggleCart()">
+            View Shopping List
+            <span class="cart-badge">5 items</span>
+          </button>
+        </div>
+
+        <div class="wiring-cta">
+          <div class="wiring-cta-content">
+            <h3>📋 Wiring Instructions</h3>
+            <p>Complete hardware pinout and connection guide</p>
+          </div>
+          <a href="wiring-guide.html" class="wiring-cta-btn">
+            View Wiring Guide →
+          </a>
+        </div>
+
+        <h2>🚀 Installation Steps</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              Connect the ESP32 with a <strong>USB data cable</strong>.
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              Close any <em>serial monitor</em> (VS Code / Arduino IDE).
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              Install a driver if needed: <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank" rel="noopener">CP210x</a> • <a href="https://www.wch-ic.com/downloads/CH34XSER_MAC_ZIP.html" target="_blank" rel="noopener">CH34x</a>.
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              Click the <strong>Install</strong> button below and select the ESP32 port.
+            </div>
+          </div>
+        </div>
+
+        <div class="center">
+          <esp-web-install-button manifest="manifest.json"></esp-web-install-button>
+        </div>
+
+        <div class="callout small">
+          If the button is disabled, use Chrome/Edge desktop and ensure the site is served over <strong>HTTPS</strong> (GitHub Pages provides this automatically).
+        </div>
+
+        <hr class="hr"/>
+
+        <details>
+          <summary>🔧 Troubleshooting</summary>
+          <ul class="list">
+            <li><strong>No port detected:</strong> change the USB cable, install the driver, restart the browser.</li>
+            <li><strong>Write failure / Timeout:</strong> hold the <code>BOOT</code> button during connection, then release. Press <code>EN/RESET</code> at the start of flashing.</li>
+            <li><strong>Incomplete firmware:</strong> check the presence of the files below and recommit.</li>
+          </ul>
+          <ul id="fwlist" class="list"></ul>
+        </details>
+
+        <details>
+          <summary>⚙️ Advanced Settings</summary>
+          <p class="small mono">bootloader → 0x1000 &nbsp;•&nbsp; partitions → 0x8000 &nbsp;•&nbsp; app → 0x10000</p>
+          <p class="small">These offsets correspond to default Arduino‑ESP32 values.</p>
+        </details>
+
+        <footer>
+          <a href="https://tigertag.io" target="_blank" rel="noopener"><strong>TigerTag.io</strong></a> — ESP32 Web Installer via ESP Web Tools
+        </footer>
+      </div>
+    </div>
+    
+    <!-- Shopping Cart Sidebar -->
+    <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+    <div class="cart-sidebar" id="cartSidebar">
+      <div class="cart-header">
+        <div>
+          <h2 class="cart-title">🛒 Shopping List</h2>
+          <p class="cart-subtitle">Components for TigerTag Scale</p>
+        </div>
+        <button class="cart-close" onclick="toggleCart()" aria-label="Close cart">✕</button>
+      </div>
+      
+      <div class="cart-content">
+        <div class="cart-item">
+          <div class="cart-item-icon">🔌</div>
+          <div class="cart-item-details">
+            <h4 class="cart-item-title">ESP32 Development Board</h4>
+            <p class="cart-item-desc">Binghe ESP32-WROOM-32 with CH340, Type-C</p>
+            <div class="cart-item-specs">
+              <span class="spec-tag">×2 boards</span>
+              <span class="spec-tag">CH340</span>
+              <span class="spec-tag">Type-C</span>
+            </div>
+          </div>
+          <a href="https://amzn.to/4hlnITL" target="_blank" rel="noopener" class="cart-item-btn">
+            View
+          </a>
+        </div>
+
+        <div class="cart-item">
+          <div class="cart-item-icon">📺</div>
+          <div class="cart-item-details">
+            <h4 class="cart-item-title">OLED Display Module</h4>
+            <p class="cart-item-desc">ELEGOO 0.96" 128×64 I2C self-luminous display</p>
+            <div class="cart-item-specs">
+              <span class="spec-tag">×3 modules</span>
+              <span class="spec-tag">128×64 px</span>
+              <span class="spec-tag">I2C</span>
+            </div>
+          </div>
+          <a href="https://amzn.to/47gIf7j" target="_blank" rel="noopener" class="cart-item-btn">
+            View
+          </a>
+        </div>
+
+        <div class="cart-item">
+          <div class="cart-item-icon">📡</div>
+          <div class="cart-item-details">
+            <h4 class="cart-item-title">RFID Reader Module</h4>
+            <p class="cart-item-desc">13.56MHz RF IC card induction, SPI interface</p>
+            <div class="cart-item-specs">
+              <span class="spec-tag">×5 modules</span>
+              <span class="spec-tag">13.56 MHz</span>
+              <span class="spec-tag">SPI</span>
+            </div>
+          </div>
+          <a href="https://amzn.to/47mqpQt" target="_blank" rel="noopener" class="cart-item-btn">
+            View
+          </a>
+        </div>
+
+        <div class="cart-item">
+          <div class="cart-item-icon">🔗</div>
+          <div class="cart-item-details">
+            <h4 class="cart-item-title">Dupont Jumper Wires</h4>
+            <p class="cart-item-desc">ELEGOO 120pcs 28AWG 20cm cable kit (M-M, M-F, F-F)</p>
+            <div class="cart-item-specs">
+              <span class="spec-tag">120 pcs</span>
+              <span class="spec-tag">3-in-1</span>
+              <span class="spec-tag">20 cm</span>
+            </div>
+          </div>
+          <a href="https://amzn.to/42QEdB9" target="_blank" rel="noopener" class="cart-item-btn">
+            View
+          </a>
+        </div>
+
+        <div class="cart-item">
+          <div class="cart-item-icon">⚖️</div>
+          <div class="cart-item-details">
+            <h4 class="cart-item-title">Load Cell Sensors (5kg)</h4>
+            <p class="cart-item-desc">Wishiot high-precision with HX711 amplifier</p>
+            <div class="cart-item-specs">
+              <span class="spec-tag">×2 sets</span>
+              <span class="spec-tag">5 kg max</span>
+              <span class="spec-tag">+ HX711</span>
+            </div>
+          </div>
+          <a href="https://amzn.to/3KZIOLl" target="_blank" rel="noopener" class="cart-item-btn">
+            View
+          </a>
+        </div>
+      </div>
+
+      <div class="cart-footer">
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span class="summary-label">Total Components:</span>
+            <span class="summary-value">5 types</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

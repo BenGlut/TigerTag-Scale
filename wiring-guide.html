@@ -113,9 +113,9 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: rgba(102, 126, 234, 0.1);
-        border: 2px solid rgba(102, 126, 234, 0.3);
-        color: var(--accent);
+        background: white;
+        border: 2px solid rgba(102, 126, 234, 0.2);
+        color: #64748b;
         padding: 10px 20px;
         border-radius: 12px;
         text-decoration: none;
@@ -125,10 +125,21 @@
         margin-bottom: 20px;
       }
       
+      [data-theme="dark"] .back-btn {
+        color: var(--muted);
+        background: rgba(15, 23, 42, 0.6);
+        border-color: rgba(102, 126, 234, 0.2);
+      }
+      
       .back-btn:hover {
-        background: rgba(102, 126, 234, 0.2);
-        border-color: rgba(102, 126, 234, 0.5);
+        background: #f8fafc;
+        border-color: rgba(102, 126, 234, 0.4);
         transform: translateX(-4px);
+      }
+      
+      [data-theme="dark"] .back-btn:hover {
+        background: rgba(15, 23, 42, 0.8);
+        border-color: rgba(102, 126, 234, 0.4);
       }
       
       .header {
@@ -194,6 +205,14 @@
         margin: 24px 0;
       }
       
+      .component-section p {
+        color: #64748b;
+      }
+      
+      [data-theme="dark"] .component-section p {
+        color: #cbd5e1;
+      }
+      
       .component-icon {
         font-size: 36px;
         margin-bottom: 12px;
@@ -213,10 +232,12 @@
         background: white;
         border-radius: 12px;
         overflow: hidden;
+        color: #64748b;
       }
       
       [data-theme="dark"] table {
         background: rgba(15, 23, 42, 0.6);
+        color: #f8fafc;
       }
       
       thead {
@@ -273,7 +294,7 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        color: var(--accent);
+        color: #64748b;
         text-decoration: none;
         font-weight: 600;
         font-size: 14px;
@@ -281,9 +302,17 @@
         transition: all 0.2s ease;
       }
       
+      [data-theme="dark"] .purchase-link {
+        color: var(--accent);
+      }
+      
       .purchase-link:hover {
-        color: var(--accent-bright);
+        color: #475569;
         transform: translateX(4px);
+      }
+      
+      [data-theme="dark"] .purchase-link:hover {
+        color: var(--accent-bright);
       }
       
       .summary-table {

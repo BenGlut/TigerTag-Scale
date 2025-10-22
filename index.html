@@ -1,32 +1,119 @@
-
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>TigerTagScale – Web Flasher</title>
+    <title>TigerTag Scale – Web Installer (ESP32)</title>
+    <meta name="description" content="Flashez facilement votre ESP32 TigerTag Scale depuis votre navigateur (Chrome/Edge) avec ESP Web Tools."/>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; line-height: 1.5; }
-      .card { max-width: 680px; margin: 0 auto; padding: 24px; border: 1px solid #ddd; border-radius: 12px; }
-      h1 { margin-top: 0; }
-      .req { background: #fff7cc; border: 1px solid #ffe58f; padding: 12px; border-radius: 8px; }
-      footer { margin-top: 24px; font-size: 12px; opacity: .8; }
+      :root { --bg:#ffffff; --fg:#111; --muted:#666; --card:#ffffff; --border:#e5e7eb; --accent:#0ea5e9; --ok:#16a34a; --warn:#f59e0b; --danger:#ef4444; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg:#0b1020; --fg:#eef2ff; --muted:#94a3b8; --card:#0f152b; --border:#1e293b; --accent:#38bdf8; --ok:#22c55e; --warn:#fbbf24; --danger:#f87171; }
+      }
+      html,body { height:100%; }
+      body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; }
+      .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 48px; }
+      .card { background: var(--card); border:1px solid var(--border); border-radius:16px; padding: 22px; box-shadow: 0 0 0 1px rgba(0,0,0,0.02), 0 8px 28px rgba(0,0,0,0.06); }
+      h1 { margin:0 0 6px; font-size: clamp(22px, 3vw, 28px); }
+      h2 { margin: 28px 0 10px; font-size: 18px; }
+      .lead { color:var(--muted); margin:0 0 14px; }
+      .grid { display:grid; gap:14px; grid-template-columns: 1fr; }
+      @media (min-width: 720px){ .grid { grid-template-columns: 1fr 1fr; } }
+      .badge { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; font-size:13px; border:1px solid var(--border); }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .danger { color: var(--danger); }
+      .muted { color: var(--muted); }
+      .list { margin:10px 0 0 0; padding-left:18px; }
+      .callout { background: rgba(14,165,233,0.10); border:1px solid rgba(14,165,233,0.35); padding:12px 14px; border-radius:12px; }
+      .hr { height:1px; background:var(--border); margin: 18px 0; border:0; }
+      .center { display:flex; justify-content:center; margin: 18px 0; }
+      .small { font-size: 13px; }
+      details { border:1px dashed var(--border); border-radius:12px; padding: 10px 12px; }
+      summary { cursor:pointer; font-weight:600; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      footer { margin-top:22px; opacity:.8; font-size:12px; text-align:center; }
+      code { background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 6px; }
+      .mono { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; }
     </style>
     <script type="module" src="https://unpkg.com/esp-web-tools@9.4.0/dist/web/install-button.js?module"></script>
+    <script>
+      // UI: détecter Web Serial + manifs
+      async function init() {
+        const flag = document.getElementById('compat');
+        const supported = 'serial' in navigator;
+        flag.innerHTML = supported
+          ? '<span class="badge ok">✓ Compatible Web Serial</span>'
+          : '<span class="badge danger">✕ Navigateur non compatible (utilisez Chrome ou Edge desktop)</span>';
+        // Vérifier la présence du manifest et des binaires
+        const status = document.getElementById('fwcheck');
+        try {
+          const res = await fetch('manifest.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('manifest introuvable');
+          const m = await res.json();
+          const parts = (m.builds?.[0]?.parts)||[];
+          const checks = await Promise.all(parts.map(async p => {
+            const r = await fetch(p.path, { method: 'HEAD', cache: 'no-store' });
+            return { path: p.path, ok: r.ok };
+          }));
+          const okAll = checks.every(c => c.ok);
+          status.innerHTML = okAll
+            ? '<span class="badge ok">Firmware prêt</span>'
+            : '<span class="badge warn">Firmware incomplet</span>';
+          const list = document.getElementById('fwlist');
+          list.innerHTML = checks.map(c => `<li class="mono">${c.ok ? '✅' : '❌'} ${c.path}</li>`).join('');
+        } catch (e) {
+          status.innerHTML = '<span class="badge danger">manifest.json manquant</span>';
+        }
+      }
+      window.addEventListener('DOMContentLoaded', init);
+    </script>
   </head>
   <body>
-    <div class="card">
-      <h1>TigerTagScale – ESP32 Web Flasher</h1>
-      <p>Flash the firmware to your ESP32 directly from your browser.</p>
-      <div class="req">
-        <strong>Requirements:</strong> Use Google Chrome / Microsoft Edge on desktop. Plug the ESP32 via USB.
-        If nothing appears, install the USB driver for your board (CP210x/CH340).
+    <div class="wrap">
+      <div class="card">
+        <h1>TigerTag Scale — Installation Web</h1>
+        <p class="lead">Flash your ESP32 directly from the browser. <em>(Chrome / Edge on desktop)</em></p>
+        <div class="grid">
+          <div id="compat" class="muted badge">Checking browser...</div>
+          <div id="fwcheck" class="muted badge">Checking firmware...</div>
+        </div>
+
+        <h2>Steps</h2>
+        <ol class="list">
+          <li>Connect the ESP32 with a <strong>USB data cable</strong>.</li>
+          <li>Close any <em>serial monitor</em> (VS Code / Arduino IDE).</li>
+          <li>Install a driver if needed : <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank" rel="noopener">CP210x</a> • <a href="https://www.wch-ic.com/downloads/CH34XSER_MAC_ZIP.html" target="_blank" rel="noopener">CH34x</a>.</li>
+          <li>Click <strong>Install</strong> and select the ESP32 port.</li>
+        </ol>
+
+        <div class="center">
+          <esp-web-install-button manifest="manifest.json"></esp-web-install-button>
+        </div>
+
+        <div class="callout small">If the button is disabled, use Chrome/Edge desktop and ensure the site is served over <strong>HTTPS</strong> (GitHub Pages provides this automatically).</div>
+
+        <hr class="hr"/>
+
+        <details>
+          <summary>Troubleshooting</summary>
+          <ul class="list">
+            <li><strong>No port detected :</strong> change the USB cable, install the driver, restart the browser.</li>
+            <li><strong>Write failure / Timeout :</strong> hold the <code>BOOT</code> button during connection, then release. Press <code>EN/RESET</code> at the start of flashing.</li>
+            <li><strong>Incomplete firmware :</strong> check the presence of the files below and recommit.</li>
+          </ul>
+          <ul id="fwlist" class="list"></ul>
+        </details>
+
+        <details>
+          <summary>Offsets used (advanced)</summary>
+          <p class="small mono">bootloader → 0x1000 &nbsp;•&nbsp; partitions → 0x8000 &nbsp;•&nbsp; app → 0x10000</p>
+          <p class="small">Ces offsets correspondent aux valeurs Arduino‑ESP32 par défaut.</p>
+        </details>
+
+        <footer>© TigerTag / Atome3D — ESP32 Web Installer via ESP Web Tools.</footer>
       </div>
-      <p style="margin:16px 0;">
-        <esp-web-install-button manifest="manifest.json"></esp-web-install-button>
-      </p>
-      <p>If the button is disabled, your browser may not support Web Serial. Try Chrome/Edge on Windows, macOS, or Linux.</p>
-      <footer>© TigerTag / Atome3D – This page flashes: bootloader, partitions, boot_app0, and app.</footer>
     </div>
   </body>
 </html>

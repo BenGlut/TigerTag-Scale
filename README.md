@@ -493,8 +493,7 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE) fi
 
 ## 📞 Support
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/TigerTag-Scale/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/TigerTag-Scale/discussions)
+- **Discord:** [Join Us](https://discord.gg/3Qv5TSqnJH)
 - **Website:** [TigerTag.io](https://tigertag.io)
 
 ---

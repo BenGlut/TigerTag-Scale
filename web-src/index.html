@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TigerTagScale</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>TigerTagScale</h1>
+        <div class="cloud-row">Cloud: <span id="cloudState">unknown</span><span id="cloudDot" class="cloud-dot"></span></div>
+        
+        <div class="card">
+            <h2>Current weight</h2>
+            <div class="weight" id="weight">-- g</div>
+            <div class="uid" id="uid">No tag detected</div>
+        </div>
+        
+        <div class="card">
+            <h2>Change API Key</h2>
+            <input type="text" id="newApiKey" placeholder="New API Key" value="">
+            <button onclick="updateApiKey()">Update</button>
+        </div>
+
+        <div class="card">
+            <h2>Send weight to TigerTag</h2>
+            <input type="number" id="manualWeight" placeholder="Weight in grams (integer)" inputmode="numeric" step="1">
+            <button onclick="sendWeight()">Send</button>
+            <div class="info">Uses current UID read by the RFID scanner</div>
+        </div>
+
+        <div class="card">
+            <h2>Calibrate scale</h2>
+            <div class="info">Current factor: <span id="calFactor">—</span></div>
+            <input type="number" id="newCalFactor" placeholder="Calibration factor" inputmode="decimal" step="0.1">
+            <div style="display:flex; gap:10px">
+                <button onclick="tareScale()">Tare</button>
+                <button onclick="updateCalibration()">Update factor</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Auto-calc factor</h2>
+            <div class="info">Place a known weight, wait for the reading to stabilize, then compute.</div>
+            <input type="number" id="knownWeight" placeholder="Known weight (g)" inputmode="decimal" step="0.1">
+            <button onclick="computeFactor()">Compute from reading</button>
+            <div class="info" id="calcHint">Formula: new = current × (displayed / known)</div>
+        </div>
+        
+        <div class="card">
+            <h2>Change Wi‑Fi network</h2>
+            <button onclick="resetWiFi()">Reconfigure Wi‑Fi</button>
+            <div class="info">Restarts captive portal</div>
+        </div>
+        
+        <div class="card">
+            <h2>Factory reset</h2>
+            <button class="danger" onclick="factoryReset()">Factory Reset</button>
+            <div class="info">Erases all data</div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

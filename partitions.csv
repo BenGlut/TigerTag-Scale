@@ -1,0 +1,18 @@
+# Name,   Type, SubType,  Offset,   Size,     Flags
+# ESP32 Partition Table for TigerTagScale
+# Total Flash: 4MB (0x400000)
+
+nvs,      data, nvs,      0x9000,   0x5000,
+otadata,  data, ota,      0xe000,   0x2000,
+app0,     app,  ota_0,    0x10000,  0x180000,
+app1,     app,  ota_1,    0x190000, 0x180000,
+spiffs,   data, spiffs,   0x310000, 0xE0000,
+
+# Explication:
+# - nvs (20KB):      Stockage clés/valeurs (WiFi, préférences)
+# - otadata (8KB):   Données OTA
+# - app0 (1.5MB):    Firmware principal
+# - app1 (1.5MB):    Firmware backup pour OTA
+# - spiffs (896KB):  Fichiers web (nommé spiffs mais utilise LittleFS)
+#
+# Total utilisé: ~3.9 MB sur 4 MB

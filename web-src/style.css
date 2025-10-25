@@ -1,0 +1,131 @@
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}
+
+body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container { 
+    max-width: 600px; 
+    margin: 0 auto; 
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 30px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+h1 { 
+    text-align: center; 
+    margin-bottom: 30px; 
+    font-size: 2em; 
+}
+
+.cloud-row { 
+    text-align: center; 
+    margin: -10px 0 20px 0; 
+    opacity: 0.95; 
+}
+
+.cloud-dot { 
+    display: inline-block; 
+    width: 10px; 
+    height: 10px; 
+    border-radius: 50%; 
+    margin-left: 8px; 
+    vertical-align: middle; 
+    background: #bbb; 
+}
+
+.cloud-ok { 
+    background: #2ecc71 !important; 
+}
+
+.cloud-down { 
+    background: #e74c3c !important; 
+}
+
+.card { 
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.weight { 
+    font-size: 3em; 
+    text-align: center; 
+    margin: 20px 0; 
+    font-weight: bold;
+}
+
+.uid { 
+    text-align: center; 
+    font-size: 1.2em; 
+    opacity: 0.9; 
+}
+
+input, button { 
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+    font-size: 1em;
+}
+
+button { 
+    background: #fff;
+    color: #667eea;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+button:hover { 
+    transform: scale(1.05); 
+    box-shadow: 0 5px 15px rgba(255,255,255,0.3);
+}
+
+button.danger { 
+    background: #e74c3c; 
+    color: #fff; 
+}
+
+button.danger:hover {
+    background: #c0392b;
+}
+
+.info { 
+    text-align: center; 
+    opacity: 0.8; 
+    margin-top: 10px; 
+    font-size: 0.9em;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .container {
+        padding: 20px;
+    }
+    
+    h1 {
+        font-size: 1.5em;
+    }
+    
+    .weight {
+        font-size: 2.5em;
+    }
+}

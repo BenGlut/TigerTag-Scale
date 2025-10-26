@@ -10,6 +10,7 @@
 #include <WiFiManager.h>
 #include <ESPAsyncWebServer.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include <ESPmDNS.h>
 #include <Preferences.h>
 #include <Wire.h>
@@ -41,6 +42,9 @@
 // LED Heartbeat
 #define LED_PIN     2
 
+// WebSocket update interval (ms)
+#define WS_UPDATE_INTERVAL_MS 250
+
 // mDNS
 #define MDNS_NAME   "tigerscale"
 
@@ -64,6 +68,9 @@ WiFiManager wm;
 // ============================================================================
 
 String apiKey = "";
+String apiDisplayName = "";     // cached display name for validated API key
+bool apiValid = false;          // last known validation state
+uint32_t lastApiBroadcastMs = 0; // WS broadcast throttle for apiStatus
 float calibrationFactor = 406;
 float currentWeight = 0.0;
 String lastUID = "";       // decimal UID for API/UI
@@ -120,6 +127,7 @@ void displayWeight(float weight, const String& uid = "");
 bool checkServerHealth();
 bool pushWeightToCloud(float w);
 void handleAutoPush(float w);
+bool validateApiKeyFirmware(const String& key, String& displayNameOut);
 
 void displayWeight(float weight, const String& uid) {
     display.clearDisplay();
@@ -127,7 +135,7 @@ void displayWeight(float weight, const String& uid) {
      // En-tête avec titre et statut WiFi
     display.setTextSize(1);
     display.setCursor(0, 0);
-    display.println("TigerTagScale");
+    display.println("Tiger-Scale");
     
     display.setTextSize(1);
     display.setCursor(100, 0);
@@ -165,10 +173,9 @@ void displayWeight(float weight, const String& uid) {
 
 void configModeCallback(WiFiManager *myWiFiManager) {
     displayMessage(
-        "MODE CONFIG",
-        "WiFi: TigerScale",
-        "IP: 192.168.4.1",
-        "Configurez le WiFi"
+        "CONFIG MODE",
+        "Connect to WiFi",
+        "TigerScale-Setup"
     );
 }
 
@@ -185,10 +192,10 @@ void setupWiFi() {
     wm.setSaveConfigCallback(saveConfigCallback);
     wm.setConfigPortalTimeout(180);
     
-    displayMessage("Connexion WiFi...", "Patientez...");
+    displayMessage("Connecting to WiFi...", "Waiting...");
     
     if (!wm.autoConnect("TigerScale-Setup")) {
-        displayMessage("ERREUR WiFi", "Redemarrage...");
+        displayMessage("WiFi ERROR", "Restarting...");
         delay(3000);
         ESP.restart();
     }
@@ -208,7 +215,7 @@ void setupWiFi() {
     cloudOK = checkServerHealth();
 
     displayMessage(
-        "WiFi Connecte!",
+        "WiFi Connected!",
         WiFi.SSID(),
         WiFi.localIP().toString(),
         cloudOK ? "Cloud: OK" : "Cloud: FAIL"
@@ -225,7 +232,7 @@ void setupFileSystem() {
     
     if (!LittleFS.begin(true)) {  // true = format si échec
         Serial.println("❌ [LITTLEFS] Échec montage!");
-        displayMessage("ERREUR", "Filesystem KO", "Verifiez data/");
+        displayMessage("ERROR", "Filesystem FAIL", "Check data/");
         delay(3000);
         return;
     }
@@ -249,6 +256,38 @@ void setupFileSystem() {
     Serial.println();
 }
 
+// Validate API key against TigerTag CDN (firmware-side)
+bool validateApiKeyFirmware(const String& key, String& displayNameOut) {
+    displayNameOut = "";
+    if (key.length() == 0) return false;
+    HTTPClient http;
+    http.setTimeout(3000);
+    String url = String("https://cdn.tigertag.io/pingbyapikey?key=") + key;
+    if (!http.begin(url)) {
+        Serial.println("[APIKEY] http.begin failed");
+        return false;
+    }
+    int code = http.GET();
+    bool ok = false;
+    if (code == 200) {
+        String body = http.getString();
+        StaticJsonDocument<256> doc;
+        DeserializationError err = deserializeJson(doc, body);
+        if (!err) {
+            ok = doc["success"] | false;
+            if (ok && doc["displayName"].is<const char*>()) {
+                displayNameOut = String(doc["displayName"].as<const char*>());
+            }
+        } else {
+            Serial.printf("[APIKEY] JSON parse error: %s\n", err.c_str());
+        }
+    } else {
+        Serial.printf("[APIKEY] HTTP %d\n", code);
+    }
+    http.end();
+    return ok;
+}
+
 // ============================================================================
 // SERVEUR WEB & API
 // ============================================================================
@@ -258,10 +297,76 @@ void setupFileSystem() {
 
 AsyncWebSocket ws("/ws");
 
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
     if (type == WS_EVT_CONNECT) {
         Serial.printf("WebSocket client #%u connected\n", client->id());
+        // Send an immediate snapshot so the UI updates right away on connect
+        int wIntSnap = (int)(currentWeight + (currentWeight >= 0 ? 0.5f : -0.5f));
+        char snap[96];
+        snprintf(snap, sizeof(snap), "{\"weight\":%d,\"uid\":\"%s\"}", wIntSnap, lastUID.c_str());
+        client->text(snap);
+        // Also push current API status so the UI reflects it immediately on fresh load
+        {
+            StaticJsonDocument<192> out;
+            out["type"] = "apiStatus";
+            out["valid"] = apiValid;
+            if (apiValid && apiDisplayName.length()) out["displayName"] = apiDisplayName;
+            String outStr; serializeJson(out, outStr);
+            client->text(outStr);
+        }
+    } else if (type == WS_EVT_DATA) {
+        AwsFrameInfo *info = (AwsFrameInfo*)arg;
+        if (!info->final || info->opcode != WS_TEXT) return; // handle simple single-frame text only
+        String msg = String((const char*)data).substring(0, len);
+
+        StaticJsonDocument<256> doc;
+        DeserializationError err = deserializeJson(doc, msg);
+        if (err) {
+            Serial.printf("[WS] bad JSON: %s\n", err.c_str());
+            return;
+        }
+        const char* mtype = doc["type"] | "";
+        if (strcmp(mtype, "updateApiKey") == 0) {
+            String newKey = String(doc["value"] | "");
+            newKey.trim();
+            if (newKey.length() == 0) {
+                displayMessage("API key FAIL", "Check key");
+                delay(600);
+                displayWeight(currentWeight, lastUID);
+                client->text("{\"type\":\"apiStatus\",\"valid\":false}");
+                return;
+            }
+            String displayName;
+            bool ok = validateApiKeyFirmware(newKey, displayName);
+            if (ok) {
+                // Persist only if valid
+                apiKey = newKey;
+                apiValid = true;
+                apiDisplayName = displayName;
+                prefs.begin("config", false);
+                prefs.putString("apiKey", apiKey);
+                prefs.putString("apiName", apiDisplayName);
+                prefs.end();
+                // Notify UI
+                displayMessage("API key OK", apiDisplayName);
+                delay(600);
+                displayWeight(currentWeight, lastUID);
+                StaticJsonDocument<192> out;
+                out["type"] = "apiStatus";
+                out["valid"] = true;
+                out["displayName"] = apiDisplayName;
+                String outStr; serializeJson(out, outStr);
+                client->text(outStr);
+                // Optional: also echo the stored key (if UI needs to sync)
+                // client->text(String("{\"type\":\"apiKey\",\"value\":\"") + apiKey + "\"}");
+            } else {
+                displayMessage("API key FAIL", "Check key");
+                delay(600);
+                displayWeight(currentWeight, lastUID);
+                client->text("{\"type\":\"apiStatus\",\"valid\":false}");
+            }
+        }
     }
 }
 
@@ -273,46 +378,58 @@ void setupWebServer() {
     // SERVIR FICHIERS STATIQUES DEPUIS LITTLEFS
     // ============================================
     
-    // Page principale (index.html.gz)
+    // Page principale (index.html, fallback to .gz)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (LittleFS.exists("/www/index.html")) {
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html", "text/html");
+            response->addHeader("Cache-Control", "no-store");
+            request->send(response);
+            return;
+        }
         if (LittleFS.exists("/www/index.html.gz")) {
-            AsyncWebServerResponse *response = request->beginResponse(
-                LittleFS, "/www/index.html.gz", "text/html"
-            );
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html.gz", "text/html");
             response->addHeader("Content-Encoding", "gzip");
-            response->addHeader("Cache-Control", "max-age=86400"); // Cache 24h
+            response->addHeader("Cache-Control", "no-store");
             request->send(response);
-        } else {
-            request->send(404, "text/plain", "index.html.gz not found - run 'pio run --target uploadfs'");
+            return;
         }
+        request->send(404, "text/plain", "index.html(.gz) not found - uploadfs required");
     });
     
-    // CSS (style.css.gz)
+    // CSS (style.css, fallback to .gz), cache 24h
     server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+        if (LittleFS.exists("/www/style.css")) {
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/style.css", "text/css");
+            response->addHeader("Cache-Control", "max-age=86400");
+            request->send(response);
+            return;
+        }
         if (LittleFS.exists("/www/style.css.gz")) {
-            AsyncWebServerResponse *response = request->beginResponse(
-                LittleFS, "/www/style.css.gz", "text/css"
-            );
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/style.css.gz", "text/css");
             response->addHeader("Content-Encoding", "gzip");
             response->addHeader("Cache-Control", "max-age=86400");
             request->send(response);
-        } else {
-            request->send(404, "text/plain", "style.css.gz not found");
+            return;
         }
+        request->send(404, "text/plain", "style.css(.gz) not found");
     });
     
-    // JavaScript (app.js.gz)
+    // JavaScript (app.js, fallback to .gz), no-store
     server.on("/app.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (LittleFS.exists("/www/app.js.gz")) {
-            AsyncWebServerResponse *response = request->beginResponse(
-                LittleFS, "/www/app.js.gz", "application/javascript"
-            );
-            response->addHeader("Content-Encoding", "gzip");
-            response->addHeader("Cache-Control", "max-age=86400");
+        if (LittleFS.exists("/www/app.js")) {
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/app.js", "application/javascript");
+            response->addHeader("Cache-Control", "no-store");
             request->send(response);
-        } else {
-            request->send(404, "text/plain", "app.js.gz not found");
+            return;
         }
+        if (LittleFS.exists("/www/app.js.gz")) {
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/app.js.gz", "application/javascript");
+            response->addHeader("Content-Encoding", "gzip");
+            response->addHeader("Cache-Control", "no-store");
+            request->send(response);
+            return;
+        }
+        request->send(404, "text/plain", "app.js(.gz) not found");
     });
     
     // ============================================
@@ -363,6 +480,8 @@ void setupWebServer() {
         json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
         json += "\"cloud\":\"" + String(cloudOK ? "ok" : "down") + "\",";
         json += "\"apiKey\":\"" + apiKey + "\",";
+        json += "\"apiValid\":" + String(apiValid ? "true" : "false") + ",";
+        json += "\"displayName\":\"" + apiDisplayName + "\",";
         json += "\"calibrationFactor\":" + String(calibrationFactor, 4);
         json += "}";
         request->send(200, "application/json", json);
@@ -575,7 +694,7 @@ void setupScale() {
     scale.set_scale(calibrationFactor);
     scale.tare();
     
-    displayMessage("Balance OK", "Tare effectuee");
+    displayMessage("Scale OK", "Tare done");
     delay(1000);
 }
 
@@ -608,7 +727,7 @@ static String u64ToDec(uint64_t v) {
 void setupRFID() {
     SPI.begin();
     rfid.PCD_Init();
-    displayMessage("RFID OK", "RC522 pret");
+    displayMessage("RFID OK", "RC522 ready");
     delay(1000);
 }
 
@@ -674,18 +793,31 @@ void setup() {
         while (1);
     }
     
-    displayMessage("TigerTagScale", "Demarrage...", "v1.1.0");
+    displayMessage("TigerTagScale", "Starting...", "v1.1.0");
     delay(2000);
     
     prefs.begin("config", true);
     apiKey = prefs.getString("apiKey", "");
     calibrationFactor = prefs.getFloat("calFactor", calibrationFactor);
+    apiDisplayName = prefs.getString("apiName", "");
     prefs.end();
     
     WiFi.onEvent(onWiFiEvent);
     setupWiFi();
     if (WiFi.isConnected()) {
         startMDNS();
+    }
+
+    // On boot: validate existing API key once
+    if (apiKey.length() > 0 && WiFi.isConnected()) {
+        String dn;
+        apiValid = validateApiKeyFirmware(apiKey, dn);
+        if (apiValid) {
+            if (dn.length()) apiDisplayName = dn;
+            prefs.begin("config", false);
+            prefs.putString("apiName", apiDisplayName);
+            prefs.end();
+        }
     }
     
     setupFileSystem();  // ← AJOUTÉ : Monte LittleFS
@@ -694,10 +826,10 @@ void setup() {
     setupRFID();
     
     displayMessage(
-        "PRET!",
+        "READY!",
         "IP: " + WiFi.localIP().toString(),
         "tigerscale.local",
-        "Posez un objet..."
+        "Place an Spool.."
     );
 }
 
@@ -717,15 +849,29 @@ void loop() {
     }
     
     float weight = readWeight();
-    if (millis() - lastUpdate > 500) {
+    if (millis() - lastUpdate > WS_UPDATE_INTERVAL_MS) {
         displayWeight(weight, lastUID);
         
         int wInt = (int)(weight + (weight >= 0 ? 0.5f : -0.5f));
         String json = "{\"weight\":" + String(wInt) + 
                       ",\"uid\":\"" + lastUID + "\"}";
         ws.textAll(json);
+        ws.cleanupClients();
         
         lastUpdate = millis();
+    }
+
+    // Periodically rebroadcast API status so late joiners / stale UIs sync automatically
+    if (millis() - lastApiBroadcastMs > 5000) { // every 5s
+        if (ws.count() > 0) {
+            StaticJsonDocument<192> out;
+            out["type"] = "apiStatus";
+            out["valid"] = apiValid;
+            if (apiValid && apiDisplayName.length()) out["displayName"] = apiDisplayName;
+            String outStr; serializeJson(out, outStr);
+            ws.textAll(outStr);
+        }
+        lastApiBroadcastMs = millis();
     }
 
     handleAutoPush(weight);

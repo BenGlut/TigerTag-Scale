@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TigerTag-Scale</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TigerTag">
+    <meta name="description" content="TigerTag Scale - Professional weight management">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <title>TigerTag Scale</title>
     <style>
 * { 
     margin: 0; 
@@ -12,502 +21,1309 @@
 }
 
 body { 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: #f5f7fa;
+    color: #2d3748;
     padding: 20px;
     min-height: 100vh;
 }
 
 .container { 
-    max-width: 600px; 
+    max-width: 480px; 
     margin: 0 auto; 
-    background: rgba(255,255,255,0.1);
-    border-radius: 15px;
-    padding: 30px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-h1 { 
-    text-align: center; 
-    margin-bottom: 30px; 
-    font-size: 2em; 
-}
-
-.cloud-row { 
-    text-align: center; 
-    margin: -10px 0 20px 0; 
-    opacity: 0.95; 
-}
-
-.cloud-dot { 
-    display: inline-block; 
-    width: 10px; 
-    height: 10px; 
-    border-radius: 50%; 
-    margin-left: 8px; 
-    vertical-align: middle; 
-    background: #bbb; 
-}
-
-/* Both class names are supported for green/up to match JS usage */
-.cloud-ok, .cloud-up { 
-    background: #2ecc71 !important; 
-}
-
-.cloud-down { 
-    background: #e74c3c !important; 
-}
-
-.card { 
-    background: rgba(255,255,255,0.2);
-    border-radius: 10px;
+/* Header */
+.header {
+    background: #fff;
+    border-radius: 16px;
     padding: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.card h2 {
-    margin-bottom: 15px;
-    font-size: 1.3em;
+.header h1 {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #1a202c;
 }
 
-.weight { 
-    font-size: 3em; 
-    text-align: center; 
-    margin: 20px 0; 
-    font-weight: bold;
+.header-right {
+    display: flex;
+    gap: 16px;
+    align-items: center;
 }
 
-.uid { 
-    text-align: center; 
-    font-size: 1.2em; 
-    opacity: 0.9; 
-}
-
-input, button { 
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
+/* Language Switcher */
+.lang-switcher {
+    display: flex;
+    background: #edf2f7;
     border-radius: 8px;
-    border: none;
-    font-size: 1em;
+    padding: 4px;
+    gap: 4px;
 }
 
-button { 
+.lang-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8em;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: #718096;
+    transition: all 0.2s;
+}
+
+.lang-btn.active {
     background: #fff;
     color: #667eea;
-    cursor: pointer;
-    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.lang-btn:hover:not(.active) {
+    color: #4a5568;
+}
+
+.status-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cbd5e0;
+    transition: background 0.3s;
+}
+
+.status-dot.active { background: #48bb78; }
+.status-dot.error { background: #f56565; }
+.status-dot.warning { background: #ed8936; }
+
+.status-info {
+    font-size: 0.75rem;
+    color: #718096;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Weight Display */
+.weight-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 32px 24px;
+    margin-bottom: 16px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.user-name {
+    font-size: 1.1em;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-bottom: 8px;
+    text-transform: capitalize;
+    padding: 8px 16px;
+    border-radius: 8px;
     transition: all 0.3s;
 }
 
-button:hover { 
-    transform: scale(1.05); 
-    box-shadow: 0 5px 15px rgba(255,255,255,0.3);
+.weight-display {
+    font-size: 3.5em;
+    font-weight: 800;
+    line-height: 1;
+    margin: 12px 0;
+    letter-spacing: -1px;
 }
 
-button.danger { 
-    background: #e74c3c; 
-    color: #fff; 
+.weight-unit {
+    font-size: 0.4em;
+    opacity: 0.8;
+    font-weight: 600;
+}
+
+.tag-id {
+    font-size: 0.95em;
+    opacity: 0.85;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+.send-status {
+    margin-top: 12px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    background: rgba(255,255,255,0.15);
+    display: inline-block;
+}
+
+/* Card */
+.card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.card-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-subtitle {
+    font-size: 0.8em;
+    color: #718096;
+    margin-bottom: 12px;
+}
+
+/* Buttons */
+button {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #667eea;
+    color: #fff;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* Tare Hold Button */
+.tare-hold-btn {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.tare-text {
+    position: relative;
+    z-index: 2;
+}
+
+.tare-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0;
+    background: rgba(255, 255, 255, 0.4);
+    transition: none;
+    z-index: 1;
+}
+
+.tare-hold-btn.holding .tare-progress {
+    animation: fillProgress 1s linear forwards;
+}
+
+@keyframes fillProgress {
+    from { width: 0%; }
+    to { width: 100%; }
+}
+
+.tare-hold-btn.success {
+    background: #48bb78 !important;
+}
+
+/* Tare button in wizard - override secondary style when holding/success */
+.button-group .tare-hold-btn.holding {
+    background: #667eea;
+    color: #fff;
+}
+
+.button-group .tare-hold-btn.holding .tare-progress {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+button.secondary {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+button.secondary:hover {
+    background: #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+button.danger {
+    background: #fff;
+    color: #f56565;
+    border: 2px solid #feb2b2;
 }
 
 button.danger:hover {
-    background: #c0392b;
+    background: #fff5f5;
+    border-color: #fc8181;
+    box-shadow: 0 2px 8px rgba(245, 101, 101, 0.2);
 }
 
-.info { 
-    text-align: center; 
-    opacity: 0.8; 
-    margin-top: 10px; 
+.button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+/* Input */
+input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95em;
+    transition: border 0.2s;
+    background: #f7fafc;
+    margin-bottom: 8px;
+}
+
+input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #fff;
+}
+
+input::placeholder {
+    color: #a0aec0;
+}
+
+/* Info Badge */
+.info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #edf2f7;
+    border-radius: 20px;
+    font-size: 0.8em;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+/* Collapsible */
+.collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.collapsible::after {
+    content: '›';
+    font-size: 1.5em;
+    transition: transform 0.2s;
+    color: #a0aec0;
+}
+
+.collapsible.active::after {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.collapsible-content.active {
+    max-height: 800px;
+    padding-top: 12px;
+}
+
+/* Calibration Wizard */
+.progress-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.progress-dots .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #cbd5e0;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.progress-dots .dot.active {
+    background: #667eea;
+    transform: scale(1.3);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+}
+
+.progress-dots .dot.completed {
+    background: #48bb78;
+}
+
+.calib-step {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.calib-step.active {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.step-icon {
+    font-size: 4em;
+    margin: 16px 0;
+    filter: grayscale(0.2);
+}
+
+.step-instruction {
+    font-size: 1em;
+    color: #4a5568;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.weight-display-small {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 16px 0;
+    font-size: 0.95em;
+    color: #2d3748;
+    border: 2px solid #e2e8f0;
+}
+
+.weight-display-small strong {
+    color: #667eea;
+    font-size: 1.3em;
+}
+
+/* Divider */
+.divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 16px 0;
+}
+
+/* Compact mode */
+.compact-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.compact-label {
+    font-size: 0.85em;
+    color: #718096;
+}
+
+.compact-value {
     font-size: 0.9em;
+    font-weight: 600;
+    color: #2d3748;
 }
 
 /* Responsive */
-@media (max-width: 640px) {
-    .container {
-        padding: 20px;
+@media (max-width: 500px) {
+    .container { padding: 0 8px; }
+    .header { 
+        flex-direction: column; 
+        gap: 12px;
+        align-items: flex-start;
     }
-    
-    h1 {
-        font-size: 1.5em;
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
     }
-    
-    .weight {
-        font-size: 2.5em;
-    }
+    .weight-display { font-size: 3em; }
+    .button-group { grid-template-columns: 1fr; }
 }
+
+/* Hide elements */
+.hidden { display: none !important; }
+
+/* Animation */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.pulse { animation: pulse 2s infinite; }
 </style>
 </head>
 <body>
     <div class="container">
-        <div class="header-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
-            <h1 style="margin:0;">TigerTag SScale</h1>
-            <div id="userNameDisplay" style="font-size:1rem; font-weight:500; color:#555;">User: <span id="userDisplayTitle">—</span></div>
-            <div id="userBar" style="display:flex; align-items:center; gap:8px; font-size:0.95rem;">
-                <span id="userLabel">User:</span>
-                <strong id="userDisplay">—</strong>
-                <span id="apiDot" class="cloud-dot cloud-down" title="API Key status"></span>
-                <span id="apiStatusText">API key not validated</span>
+        <!-- Header -->
+        <div class="header">
+            <h1>TigerTag</h1>
+            <div class="header-right">
+                <div class="status-bar">
+                    <div class="status-info">
+                        <span id="cloudDot" class="status-dot"></span>
+                        <span id="cloudText" style="font-size: 0.7rem;">—</span>
+                    </div>
+                    <div class="status-info">
+                        <span id="apiDot" class="status-dot"></span>
+                        <span id="apiText" style="font-size: 0.7rem;">API</span>
+                    </div>
+                </div>
+                <div class="lang-switcher">
+                    <button class="lang-btn active" onclick="setLanguage('en')" data-lang="en">EN</button>
+                    <button class="lang-btn" onclick="setLanguage('fr')" data-lang="fr">FR</button>
+                </div>
             </div>
         </div>
-        <div class="cloud-row">Cloud: <span id="cloudState">unknown</span><span id="cloudDot" class="cloud-dot"></span></div>
-        
-        <div class="card">
-            <h2>Current weight <span id="wsDot" class="cloud-dot cloud-down" title="WebSocket status"></span></h2>
-            <div class="weight" id="weight">-- g</div>
-            <div class="uid" id="uid">No tag detected</div>
-        </div>
-        
-        <div class="card">
-            <h2>API Key</h2>
-            <input type="text" id="newApiKey" placeholder="New API Key" value="">
-            <button onclick="updateApiKey()">Update</button>
+
+        <!-- Weight Display -->
+        <div class="weight-card">
+            <div id="userName" class="user-name hidden"></div>
+            <div class="weight-display">
+                <span id="weight">—</span>
+                <span class="weight-unit">g</span>
+            </div>
+            <div class="tag-id" id="uid" data-i18n="waiting">En attente...</div>
+            <div id="sendState" class="send-status hidden"></div>
         </div>
 
-        <div class="card">
-            <h2>Send weight to TigerTag</h2>
-            <input type="number" id="manualWeight" placeholder="Weight in grams (integer)" inputmode="numeric" step="1">
-            <button onclick="sendWeight()">Send</button>
-            <div class="info">Uses current UID read by the RFID scanner</div>
-        </div>
+        <!-- Tare Button -->
+        <button id="tareBtn" class="tare-hold-btn" onmousedown="startTare()" onmouseup="cancelTare()" onmouseleave="cancelTare()" ontouchstart="startTare()" ontouchend="cancelTare()">
+            <span class="tare-text" data-i18n="tare">TARE</span>
+            <span class="tare-progress"></span>
+        </button>
 
+        <!-- API Key -->
         <div class="card">
-            <h2>Calibrate scale</h2>
-            <div class="info">Current factor: <span id="calFactor">—</span></div>
-            <input type="number" id="newCalFactor" placeholder="Calibration factor" inputmode="decimal" step="0.1">
-            <div style="display:flex; gap:10px">
-                <button onclick="tareScale()">Tare</button>
-                <button onclick="updateCalibration()">Update factor</button>
+            <div class="card-title collapsible" onclick="toggleSection(this)">
+                🔑 <span data-i18n="apiKey">Clé API</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="compact-row">
+                    <span class="compact-label" data-i18n="user">Utilisateur</span>
+                    <span class="compact-value" id="userDisplay">—</span>
+                </div>
+                <div class="divider"></div>
+                <input type="text" id="newApiKey" data-i18n-placeholder="newApiKey" placeholder="Nouvelle clé API" autocomplete="off">
+                <div class="button-group">
+                    <button onclick="updateApiKey()" data-i18n="update">Mettre à jour</button>
+                    <button class="danger" onclick="deleteApiKey()" data-i18n="delete">Supprimer</button>
+                </div>
             </div>
         </div>
-        
+
+        <!-- Calibration -->
         <div class="card">
-            <h2>Auto-calc factor</h2>
-            <div class="info">Place a known weight, wait for the reading to stabilize, then compute.</div>
-            <input type="number" id="knownWeight" placeholder="Known weight (g)" inputmode="decimal" step="0.1">
-            <button onclick="computeFactor()">Compute from reading</button>
-            <div class="info" id="calcHint">Formula: new = current × (displayed / known)</div>
+            <div class="card-title collapsible" onclick="toggleSection(this)">
+                ✨ <span data-i18n="calibration">Calibration</span>
+            </div>
+            <div class="collapsible-content">
+                <!-- Calibration Wizard -->
+                <div id="calibWizard">
+                    <!-- Progress indicator -->
+                    <div class="progress-dots">
+                        <span class="dot active" data-step="1"></span>
+                        <span class="dot" data-step="2"></span>
+                        <span class="dot" data-step="3"></span>
+                    </div>
+                    
+                    <!-- Step 1: Empty scale -->
+                    <div id="step1" class="calib-step active">
+                        <div class="step-icon">⚖️</div>
+                        <div class="step-instruction" data-i18n="step1Instruction">Retirez le filament de la balance</div>
+                        <button onclick="calibStep1()" data-i18n="step1Button">Step 2 →</button>
+                    </div>
+                    
+                    <!-- Step 2: Place known weight -->
+                    <div id="step2" class="calib-step">
+                        <div class="step-icon">📦</div>
+                        <div class="step-instruction" data-i18n="step2Instruction">Mettez un filament de poids connu et indiquez sa valeur</div>
+                        <input type="number" id="calibKnownWeight" data-i18n-placeholder="calibKnownWeight" placeholder="Poids réel (g)" step="0.1" inputmode="decimal" style="font-size: 1.1em; padding: 16px; text-align: center; font-weight: 600;">
+                        <div class="button-group" style="grid-template-columns: 1fr 1fr 1fr;">
+                            <button class="secondary" onclick="calibBack(1)" data-i18n="back">← Retour</button>
+                            <button id="tareBtnCalib" class="tare-hold-btn" onmousedown="startTareCalib()" onmouseup="cancelTareCalib()" onmouseleave="cancelTareCalib()" ontouchstart="startTareCalib()" ontouchend="cancelTareCalib()" style="background: #667eea; color: #fff;">
+                                <span class="tare-text" data-i18n="tare">TARE</span>
+                                <span class="tare-progress"></span>
+                            </button>
+                            <button onclick="calibStep2()" data-i18n="step2Button">Calibrer ✓</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: Success -->
+                    <div id="step3" class="calib-step">
+                        <div class="step-icon">✅</div>
+                        <div class="step-instruction" data-i18n="step3Instruction">La balance est maintenant calibrée</div>
+                        <div class="info-badge">
+                            <span data-i18n="newFactor">Nouveau facteur</span>: <strong id="calibNewFactor">--</strong>
+                        </div>
+                        <button class="secondary" onclick="calibReset()" data-i18n="calibAgain">Calibrer à nouveau</button>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <!-- Manual calibration (collapsed by default) -->
+                <div class="card-subtitle collapsible" onclick="toggleSection(this)" style="cursor: pointer;">
+                    ✏️ <span data-i18n="manualCalib">Calibration manuelle</span>
+                </div>
+                <div class="collapsible-content">
+                    <div class="info-badge" style="margin-bottom: 12px;">
+                        <span data-i18n="currentFactor">Facteur actuel</span>: <strong id="calFactor">—</strong>
+                    </div>
+                    <input type="number" id="newCalFactor" data-i18n-placeholder="newFactor" placeholder="Nouveau facteur" step="0.1" min="0.1">
+                    <button class="secondary" onclick="updateCalibration()" data-i18n="apply">Appliquer</button>
+                </div>
+            </div>
         </div>
-        
+
+        <!-- Advanced -->
         <div class="card">
-            <h2>Change Wi‑Fi network</h2>
-            <button onclick="resetWiFi()">Reconfigure Wi‑Fi</button>
-            <div class="info">Restarts captive portal</div>
-        </div>
-        
-        <div class="card">
-            <h2>Factory reset</h2>
-            <button class="danger" onclick="factoryReset()">Factory Reset</button>
-            <div class="info">Erases all data</div>
+            <div class="card-title collapsible" onclick="toggleSection(this)">
+                ⚙️ <span data-i18n="advanced">Avancé</span>
+            </div>
+            <div class="collapsible-content">
+                <button class="secondary" onclick="resetWiFi()">📶 <span data-i18n="reconfigWifi">Reconfigurer Wi‑Fi</span></button>
+                <div style="height: 8px;"></div>
+                <button class="danger" onclick="factoryReset()">🗑️ <span data-i18n="factoryReset">Réinitialisation</span></button>
+                <div class="divider"></div>
+                <div class="compact-row">
+                    <span class="compact-label" data-i18n="uptime">Durée de fonctionnement</span>
+                    <span class="compact-value" id="uptime">--:--:--</span>
+                </div>
+            </div>
         </div>
     </div>
     
     <script>
-const wsDot = document.getElementById('wsDot');
+// ========== TRANSLATIONS ==========
+const translations = {
+    fr: {
+        waiting: 'Attente du TigerTag...',
+        quickActions: 'Actions rapides',
+        tare: 'TARE',
+        apiKey: 'Clé API',
+        user: 'Utilisateur',
+        newApiKey: 'Nouvelle clé API',
+        update: 'Mettre à jour',
+        delete: 'Supprimer',
+        calibration: 'Assistant calibration',
+        currentFactor: 'Facteur actuel',
+        autoCalc: 'Calcul automatique',
+        knownWeight: 'Poids connu (g)',
+        compute: 'Calculer',
+        manual: 'Manuel',
+        newFactor: 'Nouveau facteur',
+        apply: 'Appliquer',
+        advanced: 'Avancé',
+        reconfigWifi: 'Reconfigurer Wi‑Fi',
+        factoryReset: 'Réinitialisation',
+        uptime: 'Durée de fonctionnement',
+        // Calibration wizard
+        step1Title: 'Step 1',
+        step1Instruction: 'Retirez le filament de la balance',
+        step1Button: 'Step 2 →',
+        step2Title: 'Step 2',
+        step2Instruction: 'Mettez un filament de poids connu et indiquez sa valeur',
+        step2Button: 'Calibrer ✓',
+        step3Title: 'Calibré !',
+        step3Instruction: 'La balance est maintenant calibrée',
+        currentReading: 'Lecture actuelle',
+        calibKnownWeight: 'Poids réel (g)',
+        newFactor: 'Nouveau facteur',
+        back: '← Retour',
+        calibAgain: 'Restart',
+        manualCalib: 'Calibration manuelle',
+        // Status
+        cloud: 'Cloud',
+        offline: 'Hors ligne',
+        validated: 'Validé',
+        invalid: 'Invalide',
+        notConfigured: 'Non configuré',
+        configureApiKey: 'Configurer la clé API',
+        apiKeyInvalid: 'Clé API invalide',
+        // Alerts
+        alertEnterKey: 'Veuillez saisir une clé API',
+        alertUpdateError: 'Erreur lors de la mise à jour',
+        alertDeleteConfirm: 'Supprimer la clé API ?',
+        alertDeleteError: 'Erreur lors de la suppression',
+        alertInvalidFactor: 'Facteur invalide',
+        alertNegativeFactor: '⚠️ Le coefficient doit être positif',
+        alertError: 'Erreur',
+        alertInvalidWeight: 'Poids connu invalide',
+        alertDataUnavailable: 'Données non disponibles',
+        alertWeightTooLight: '⚠️ Poids trop léger (min. 200g)\nVérifiez que le filament est bien sur la balance.',
+        alertReconfigConfirm: 'Reconfigurer le Wi‑Fi ? L\'appareil redémarrera.',
+        alertResetConfirm: '⚠️ ATTENTION : Cette action effacera toutes les données. Continuer ?',
+        // Send status
+        sending: '⏳ Envoi...',
+        sent: '✓ Envoyé',
+        sendError: '✗ Erreur',
+        sendIn: 'Envoi dans'
+    },
+    en: {
+        waiting: 'Waiting TigerTag...',
+        quickActions: 'Quick Actions',
+        tare: 'TARE',
+        apiKey: 'API Key',
+        user: 'User',
+        newApiKey: 'New API Key',
+        update: 'Update',
+        delete: 'Delete',
+        calibration: 'Wizard Calibration',
+        currentFactor: 'Current factor',
+        autoCalc: 'Auto calculation',
+        knownWeight: 'Known weight (g)',
+        compute: 'Compute',
+        manual: 'Manual',
+        newFactor: 'New factor',
+        apply: 'Apply',
+        advanced: 'Advanced',
+        reconfigWifi: 'Reconfigure Wi‑Fi',
+        factoryReset: 'Factory Reset',
+        uptime: 'Uptime',
+        // Calibration wizard
+        step1Title: 'Step 1',
+        step1Instruction: 'Remove the filament from the scale',
+        step1Button: 'Step 2 →',
+        step2Title: 'Step 2',
+        step2Instruction: 'Place a filament of known weight and enter its value',
+        step2Button: 'Calibrate ✓',
+        step3Title: 'Calibrated!',
+        step3Instruction: 'The scale is now calibrated',
+        currentReading: 'Current reading',
+        calibKnownWeight: 'Real weight (g)',
+        newFactor: 'New factor',
+        back: '← Back',
+        calibAgain: 'Restart',
+        manualCalib: 'Manual calibration',
+        // Status
+        cloud: 'Cloud',
+        offline: 'Offline',
+        validated: 'Validated',
+        invalid: 'Invalid',
+        notConfigured: 'Not configured',
+        configureApiKey: 'Setup API Key',
+        apiKeyInvalid: 'Invalid API Key',
+        // Alerts
+        alertEnterKey: 'Please enter an API key',
+        alertUpdateError: 'Update error',
+        alertDeleteConfirm: 'Delete API key?',
+        alertDeleteError: 'Delete error',
+        alertInvalidFactor: 'Invalid factor',
+        alertNegativeFactor: '⚠️ Coefficient must be positive',
+        alertError: 'Error',
+        alertInvalidWeight: 'Invalid known weight',
+        alertDataUnavailable: 'Data unavailable',
+        alertWeightTooLight: '⚠️ Weight too light (min. 200g)\nCheck that the filament is on the scale.',
+        alertReconfigConfirm: 'Reconfigure Wi‑Fi? Device will restart.',
+        alertResetConfirm: '⚠️ WARNING: This will erase all data. Continue?',
+        // Send status
+        sending: '⏳ Sending...',
+        sent: '✓ Sent',
+        sendError: '✗ Error',
+        sendIn: 'Sending in'
+    }
+};
+
+let currentLang = localStorage.getItem('tigertag_lang') || 'en';
+
+function t(key) {
+    return translations[currentLang][key] || key;
+}
+
+function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('tigertag_lang', lang);
+    document.documentElement.lang = lang;
+    
+    // Update lang buttons
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+    
+    // Update all translated elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        el.textContent = t(key);
+    });
+    
+    // Update placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        el.placeholder = t(key);
+    });
+    
+    // Update dynamic content
+    updateCloudText();
+    updateApiText();
+}
+
+// ========== DOM ELEMENTS ==========
 const cloudDot = document.getElementById('cloudDot');
-const cloudState = document.getElementById('cloudState');
+const cloudText = document.getElementById('cloudText');
+const apiDot = document.getElementById('apiDot');
+const apiText = document.getElementById('apiText');
 const weightEl = document.getElementById('weight');
 const uidEl = document.getElementById('uid');
 const calFactorEl = document.getElementById('calFactor');
+const userDisplayEl = document.getElementById('userDisplay');
+const sendStateEl = document.getElementById('sendState');
+const userNameEl = document.getElementById('userName');
 
-let ws;
+// ========== STATE ==========
 let currentWeight = null;
 let currentUid = null;
 let calFactor = null;
 let apiKey = '';
+let cloudStatus = 'unknown';
+let apiStatus = 'none';
 
-// --- Minimal DOM diff helpers (avoid unnecessary reflows) ---
-function setTextIfChanged(el, next) {
-    if (!el) return;
-    const cur = el.textContent;
-    if (cur !== String(next)) el.textContent = String(next);
-}
-function toggleClass(el, addCls, removeCls) {
-    if (!el) return;
-    let changed = false;
-    if (addCls && !el.classList.contains(addCls)) { el.classList.add(addCls); changed = true; }
-    if (removeCls && el.classList.contains(removeCls)) { el.classList.remove(removeCls); changed = true; }
-    return changed;
+// ========== UTILITIES ==========
+function setTextIfChanged(el, txt) {
+    if (!el || el.textContent === txt) return;
+    el.textContent = txt;
 }
 
-// --- API Key validation (calls external endpoint) ---
-const API_PING_BASE = 'https://cdn.tigertag.io/pingbyapikey?key=';
-let apiValidateTimer = null;
+function toggleSection(el) {
+    el.classList.toggle('active');
+    const content = el.nextElementSibling;
+    content.classList.toggle('active');
+}
 
-function setApiStatus(valid, displayName = '') {
-    const dot = document.getElementById('apiDot');
-    const txt = document.getElementById('apiStatusText');
-    const user = document.getElementById('userDisplay');
-    const userTitle = document.getElementById('userDisplayTitle');
-    if (valid) {
-        toggleClass(dot, 'cloud-up', 'cloud-down');
-        setTextIfChanged(txt, 'API key valid');
-        if (displayName) {
-            setTextIfChanged(user, displayName);
-            if (userTitle) setTextIfChanged(userTitle, displayName);
+function updateCloudText() {
+    const txt = cloudStatus === 'up' || cloudStatus === 'ok' ? t('cloud') : t('offline');
+    setTextIfChanged(cloudText, txt);
+}
+
+function updateApiText() {
+    let txt = t('user') + ': ';
+    if (apiStatus === 'valid') {
+        txt = userDisplayEl.textContent;
+    } else if (apiStatus === 'invalid') {
+        txt += t('invalid');
+    } else {
+        txt += t('notConfigured');
+    }
+    setTextIfChanged(userDisplayEl, txt.replace(t('user') + ': ', ''));
+}
+
+function setCloudStatus(state) {
+    const s = String(state || '').toLowerCase();
+    cloudStatus = (s === 'up' || s === 'ok') ? 'up' : 'down';
+    updateCloudText();
+    
+    if (cloudStatus === 'up') {
+        cloudDot.className = 'status-dot active';
+    } else {
+        cloudDot.className = 'status-dot error';
+    }
+}
+
+function setApiStatus(state, displayName) {
+    apiStatus = state;
+    const name = displayName ? displayName.trim() : '';
+    
+    if (state === 'valid') {
+        apiDot.className = 'status-dot active';
+        setTextIfChanged(userDisplayEl, name || t('validated'));
+        // Show username above weight if available
+        if (name && userNameEl) {
+            setTextIfChanged(userNameEl, name);
+            userNameEl.classList.remove('hidden');
+            userNameEl.style.color = 'rgba(255,255,255,0.9)';
+            userNameEl.style.background = 'transparent';
+        }
+    } else if (state === 'invalid') {
+        apiDot.className = 'status-dot error';
+        setTextIfChanged(userDisplayEl, t('invalid'));
+        // Show API error alert
+        if (userNameEl) {
+            setTextIfChanged(userNameEl, '⚠️ ' + t('apiKeyInvalid'));
+            userNameEl.classList.remove('hidden');
+            userNameEl.style.color = '#fff';
+            userNameEl.style.background = 'rgba(245,101,101,0.3)';
         }
     } else {
-        toggleClass(dot, 'cloud-down', 'cloud-up');
-        setTextIfChanged(txt, 'API key invalid');
-        if (!displayName) {
-            setTextIfChanged(user, '—');
-            if (userTitle) setTextIfChanged(userTitle, '—');
+        apiDot.className = 'status-dot warning';
+        setTextIfChanged(userDisplayEl, t('notConfigured'));
+        // Show configuration alert
+        if (userNameEl) {
+            setTextIfChanged(userNameEl, '🚨 ' + t('configureApiKey'));
+            userNameEl.classList.remove('hidden');
+            userNameEl.style.color = '#fff';
+            userNameEl.style.background = 'rgba(237,137,54,0.3)';
         }
     }
 }
 
-function validateApiKey(key) {
-    if (!key || typeof key !== 'string') { setApiStatus(false); return; }
-    // Debounce calls to avoid spamming the endpoint when typing
-    if (apiValidateTimer) clearTimeout(apiValidateTimer);
-    apiValidateTimer = setTimeout(() => {
-        fetch(API_PING_BASE + encodeURIComponent(key), { method: 'GET', mode: 'cors', cache: 'no-store' })
-            .then(r => r.ok ? r.json() : Promise.reject(r.status))
-            .then(j => {
-                if (j && j.success) {
-                    setApiStatus(true, j.displayName || '');
-                } else {
-                    setApiStatus(false);
-                }
-            })
-            .catch(() => setApiStatus(false));
-    }, 250);
-}
-
-// Met à jour l'indicateur visuel de connexion WebSocket
-function setWsStatus(connected) {
-    if (connected) {
-        toggleClass(wsDot, 'cloud-up', 'cloud-down');
-    } else {
-        toggleClass(wsDot, 'cloud-down', 'cloud-up');
+function setSendState(msg, color) {
+    if (!msg) {
+        sendStateEl.classList.add('hidden');
+        return;
     }
+    setTextIfChanged(sendStateEl, msg);
+    if (color) sendStateEl.style.background = color;
+    sendStateEl.classList.remove('hidden');
 }
 
-// Met à jour l'état de connexion au cloud et son indicateur visuel
-function setCloudStatus(status) {
-    const isUp = (status === 'connected' || status === 'ok' || status === true);
-    setTextIfChanged(cloudState, isUp ? 'connected' : (status || 'down'));
-    if (isUp) {
-        toggleClass(cloudDot, 'cloud-up', 'cloud-down');
-    } else {
-        toggleClass(cloudDot, 'cloud-down', 'cloud-up');
-    }
+function formatHMS(secs) {
+    if (!isFinite(secs)) return '--:--:--';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+    return [h,m,s].map(x => String(x).padStart(2,'0')).join(':');
 }
 
-// Établit la connexion WebSocket et gère les événements associés
-function connectWs() {
-    ws = new WebSocket(`ws://${location.host}/ws`);
-
-    ws.onopen = () => {
-        setWsStatus(true);
-        console.log('WebSocket connected');
-    };
-
-    ws.onclose = () => {
-        setWsStatus(false);
-        console.log('WebSocket disconnected, retrying in 3s...');
-        setTimeout(connectWs, 3000);
-    };
-
-    ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'weight') {
-            if (currentWeight !== msg.value) {
-                currentWeight = msg.value;
-                setTextIfChanged(weightEl, `${currentWeight} g`);
-            }
-        } else if (msg.type === 'uid') {
-            const nextUid = msg.value || '';
-            if (currentUid !== nextUid) {
-                currentUid = nextUid;
-                setTextIfChanged(uidEl, currentUid ? currentUid : 'No tag detected');
-            }
-        } else if (msg.type === 'calFactor') {
-            const next = msg.value;
-            if (calFactor !== next) {
-                calFactor = next;
-                const shown = (calFactor !== null && !isNaN(calFactor)) ? Number(calFactor).toFixed(2) : '—';
-                setTextIfChanged(calFactorEl, shown);
-            }
-        } else if (msg.type === 'cloud') {
-            setCloudStatus(msg.value);
-        } else if (msg.type === 'apiKey') {
-            const nextKey = msg.value || '';
-            if (apiKey !== nextKey) {
-                apiKey = nextKey;
-                const input = document.getElementById('newApiKey');
-                if (input && input.value !== apiKey) input.value = apiKey;
-            }
-        } else if (msg.type === 'apiStatus') {
-            // Firmware reports API key validation result
-            setApiStatus(!!msg.valid, msg.displayName || '');
-        } else {
-            // Fallback: handle snapshots without type (weight, uid, cal factor, cloud, apiKey)
-            if (typeof msg.weight !== 'undefined' && currentWeight !== msg.weight) {
-                currentWeight = msg.weight;
-                setTextIfChanged(weightEl, `${currentWeight} g`);
-            }
-            if (typeof msg.uid !== 'undefined') {
-                const nextUid = msg.uid || '';
-                if (currentUid !== nextUid) {
-                    currentUid = nextUid;
-                    setTextIfChanged(uidEl, currentUid ? currentUid : 'No tag detected');
-                }
-            }
-            if (typeof msg.calibrationFactor !== 'undefined') {
-                const next = msg.calibrationFactor;
-                if (calFactor !== next) {
-                    calFactor = next;
-                    const shown = (calFactor !== null && !isNaN(calFactor)) ? Number(calFactor).toFixed(2) : '—';
-                    setTextIfChanged(calFactorEl, shown);
-                }
-            }
-            if (typeof msg.cloud === 'string' || typeof msg.cloud === 'boolean') {
-                setCloudStatus(msg.cloud);
-            }
-            if (typeof msg.apiKey === 'string') {
-                const nextKey = msg.apiKey || '';
-                if (apiKey !== nextKey) {
-                    apiKey = nextKey;
-                    const input = document.getElementById('newApiKey');
-                    if (input && input.value !== apiKey) input.value = apiKey;
-                }
-            }
-        }
-    };
-}
-
-// Envoie une requête pour mettre à jour la clé API sur le serveur
+// ========== API FUNCTIONS ==========
 function updateApiKey() {
-    const btn = event && event.target ? event.target : document.querySelector('button[onclick="updateApiKey()"]');
     const input = document.getElementById('newApiKey');
-    const newKey = (input && input.value ? input.value.trim() : '');
-    if (!newKey) { alert('Please enter a valid API key.'); return; }
-
-    // Optional: show a short pending state on the button
-    if (btn) { btn.disabled = true; btn.textContent = 'Verifying…'; }
-
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        // Send key to firmware; firmware will validate and reply with {type:'apiStatus', valid, displayName}
-        ws.send(JSON.stringify({ type: 'updateApiKey', value: newKey }));
-    } else {
-        alert('WebSocket not connected. Please reload the page.');
-    }
-
-    // Re-enable the button shortly; final status will be reflected via apiStatus message
-    setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Update'; } }, 800);
-}
-
-// Envoie un poids manuel au serveur associé à l'UID courant
-function sendWeight() {
-    const manualWeight = parseInt(document.getElementById('manualWeight').value, 10);
-    if (isNaN(manualWeight)) {
-        alert('Please enter a valid integer weight.');
+    const key = (input.value || '').trim();
+    if (!key) { 
+        alert(t('alertEnterKey'));
         return;
     }
-    if (!currentUid) {
-        alert('No UID detected. Cannot send weight.');
-        return;
-    }
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'sendWeight', weight: manualWeight, uid: currentUid }));
-    }
+    // Optional: small UX lock
+    const btns = document.querySelectorAll('button[onclick="updateApiKey()"]');
+    btns.forEach(b => { b.disabled = true; b.textContent = t('update') + '…'; });
+
+    fetch('/api/apikey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Firmware expects { key: "..." }
+        body: JSON.stringify({ key: key })
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(res => {
+        const ok = !!res.success;
+        const name = (res.displayName || '').trim();
+        if (ok) {
+            apiKey = key;
+            setApiStatus('valid', name);
+        } else {
+            setApiStatus('invalid');
+            alert(t('alertUpdateError'));
+        }
+    })
+    .catch(() => {
+        setApiStatus('invalid');
+        alert(t('alertUpdateError'));
+    })
+    .finally(() => btns.forEach(b => { b.disabled = false; b.textContent = t('update'); }));
 }
 
-// Envoie une commande pour mettre la balance à zéro (tare)
+function deleteApiKey() {
+    if (!confirm(t('alertDeleteConfirm'))) return;
+    const delBtn = document.querySelector('button.danger[onclick="deleteApiKey()"]');
+    if (delBtn) { delBtn.disabled = true; delBtn.textContent = t('delete') + '…'; }
+
+    // Use simple GET endpoint implemented in firmware
+    fetch('/apikeydelete', { method: 'GET', cache: 'no-store' })
+      .then(async r => {
+          if (!r.ok) throw new Error('http ' + r.status);
+          const raw = await r.text();
+          let ok = raw && raw.trim().toLowerCase() === 'ok';
+          if (!ok) { try { const j = JSON.parse(raw); ok = !!j.success; } catch(_) {} }
+          return ok;
+      })
+      .then(ok => {
+          if (ok) {
+              apiKey = '';
+              const input = document.getElementById('newApiKey');
+              if (input) input.value = '';
+              setApiStatus('none');
+          } else {
+              alert(t('alertDeleteError'));
+          }
+      })
+      .catch(() => alert(t('alertDeleteError')))
+      .finally(() => { if (delBtn) { delBtn.disabled = false; delBtn.textContent = t('delete'); } });
+}
+
 function tareScale() {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'tare' }));
+    fetch('/api/tare', { method: 'POST' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .catch(() => {});
+}
+
+// ========== TARE HOLD BUTTON ==========
+let tareTimer = null;
+let tareBtn = null;
+
+function startTare() {
+    if (!tareBtn) tareBtn = document.getElementById('tareBtn');
+    
+    // Add holding class to start animation
+    tareBtn.classList.add('holding');
+    
+    // Set timer for 1 second
+    tareTimer = setTimeout(() => {
+        // Execute tare after 1 second
+        tareScale();
+        
+        // Visual feedback
+        tareBtn.classList.remove('holding');
+        tareBtn.classList.add('success');
+        
+        // Reset after short delay
+        setTimeout(() => {
+            tareBtn.classList.remove('success');
+            const progress = tareBtn.querySelector('.tare-progress');
+            if (progress) progress.style.width = '0';
+        }, 500);
+    }, 1000);
+}
+
+function cancelTare() {
+    if (!tareBtn) tareBtn = document.getElementById('tareBtn');
+    
+    // Cancel timer
+    if (tareTimer) {
+        clearTimeout(tareTimer);
+        tareTimer = null;
+    }
+    
+    // Remove holding class
+    tareBtn.classList.remove('holding');
+    
+    // Reset progress bar
+    const progress = tareBtn.querySelector('.tare-progress');
+    if (progress) {
+        progress.style.width = '0';
     }
 }
 
-// Envoie une nouvelle valeur de facteur de calibration au serveur
+// ========== TARE BUTTON IN CALIBRATION WIZARD ==========
+let tareBtnCalib = null;
+let tareTimerCalib = null;
+
+function startTareCalib() {
+    if (!tareBtnCalib) tareBtnCalib = document.getElementById('tareBtnCalib');
+    
+    // Add holding class to start animation
+    tareBtnCalib.classList.add('holding');
+    
+    // Set timer for 1 second
+    tareTimerCalib = setTimeout(() => {
+        // Execute tare after 1 second
+        tareScale();
+        
+        // Visual feedback
+        tareBtnCalib.classList.remove('holding');
+        tareBtnCalib.classList.add('success');
+        
+        // Reset after short delay
+        setTimeout(() => {
+            tareBtnCalib.classList.remove('success');
+            const progress = tareBtnCalib.querySelector('.tare-progress');
+            if (progress) progress.style.width = '0';
+        }, 500);
+    }, 1000);
+}
+
+function cancelTareCalib() {
+    if (!tareBtnCalib) tareBtnCalib = document.getElementById('tareBtnCalib');
+    
+    // Cancel timer
+    if (tareTimerCalib) {
+        clearTimeout(tareTimerCalib);
+        tareTimerCalib = null;
+    }
+    
+    // Remove holding class
+    tareBtnCalib.classList.remove('holding');
+    
+    // Reset progress bar
+    const progress = tareBtnCalib.querySelector('.tare-progress');
+    if (progress) {
+        progress.style.width = '0';
+    }
+}
+
 function updateCalibration() {
-    const newFactor = parseFloat(document.getElementById('newCalFactor').value);
-    if (isNaN(newFactor)) {
-        alert('Please enter a valid calibration factor.');
+    const factor = parseFloat(document.getElementById('newCalFactor').value);
+    if (isNaN(factor)) { 
+        alert(t('alertInvalidFactor'));
         return;
     }
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'updateCalFactor', value: newFactor }));
+    
+    // Validation: factor must be positive
+    if (factor <= 0) {
+        alert(t('alertNegativeFactor'));
+        return;
     }
+    
+    fetch('/api/calibration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: factor })
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .catch(() => alert(t('alertError')));
 }
 
-// Calcule un nouveau facteur de calibration basé sur un poids connu et la lecture actuelle
 function computeFactor() {
-    const knownWeight = parseFloat(document.getElementById('knownWeight').value);
-    if (isNaN(knownWeight) || knownWeight <= 0) {
-        alert('Please enter a valid known weight greater than zero.');
+    const known = parseFloat(document.getElementById('knownWeight').value);
+    if (isNaN(known) || known <= 0) {
+        alert(t('alertInvalidWeight'));
         return;
     }
     if (currentWeight === null || calFactor === null) {
-        alert('Current weight or calibration factor not available.');
+        alert(t('alertDataUnavailable'));
         return;
     }
-    const newFactor = calFactor * (currentWeight / knownWeight);
+    
+    const newFactor = calFactor * (currentWeight / known);
     document.getElementById('newCalFactor').value = newFactor.toFixed(3);
+    
+    fetch('/api/calibration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: newFactor })
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .catch(() => alert(t('alertError')));
 }
 
-// Envoie une commande pour réinitialiser la configuration Wi-Fi et redémarrer le portail captif
 function resetWiFi() {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'resetWiFi' }));
-    }
+    if (!confirm(t('alertReconfigConfirm'))) return;
+    fetch('/api/reset-wifi', { method: 'POST' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .catch(() => {});
 }
 
-// Demande une réinitialisation d'usine après confirmation utilisateur
 function factoryReset() {
-    if (confirm('Are you sure you want to factory reset? This will erase all data.')) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'factoryReset' }));
+    if (!confirm(t('alertResetConfirm'))) return;
+    fetch('/api/factory-reset', { method: 'POST' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .catch(() => {});
+}
+
+// ========== CALIBRATION WIZARD ==========
+function updateProgressDots(activeStep) {
+    document.querySelectorAll('.progress-dots .dot').forEach((dot, index) => {
+        const step = index + 1;
+        dot.classList.remove('active', 'completed');
+        
+        if (step === activeStep) {
+            dot.classList.add('active');
+        } else if (step < activeStep) {
+            dot.classList.add('completed');
+        }
+    });
+}
+
+function calibStep1() {
+    // Tare the scale
+    fetch('/api/tare', { method: 'POST' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(() => {
+        // Move to step 2
+        document.getElementById('step1').classList.remove('active');
+        document.getElementById('step2').classList.add('active');
+        updateProgressDots(2);
+    })
+    .catch(() => alert(t('alertError')));
+}
+
+function calibStep2() {
+    const knownWeight = parseFloat(document.getElementById('calibKnownWeight').value);
+    
+    if (isNaN(knownWeight) || knownWeight <= 0) {
+        alert(t('alertInvalidWeight'));
+        return;
+    }
+    
+    if (currentWeight === null || calFactor === null) {
+        alert(t('alertDataUnavailable'));
+        return;
+    }
+    
+    // Validation: weight must be at least 200g
+    if (currentWeight < 200) {
+        alert(t('alertWeightTooLight'));
+        return;
+    }
+    
+    // Calculate new factor
+    const newFactor = calFactor * (currentWeight / knownWeight);
+    
+    // Validation: factor must be positive
+    if (newFactor <= 0) {
+        alert(t('alertNegativeFactor'));
+        return;
+    }
+    
+    // Send to device
+    fetch('/api/calibration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: newFactor })
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(() => {
+        // Update display
+        document.getElementById('calibNewFactor').textContent = newFactor.toFixed(2);
+        
+        // Move to step 3
+        document.getElementById('step2').classList.remove('active');
+        document.getElementById('step3').classList.add('active');
+        updateProgressDots(3);
+    })
+    .catch(() => alert(t('alertError')));
+}
+
+function calibBack(step) {
+    // Go back to step
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step' + step).classList.add('active');
+    updateProgressDots(step);
+    
+    // Clear input
+    document.getElementById('calibKnownWeight').value = '';
+}
+
+function calibReset() {
+    // Reset wizard to step 1
+    document.getElementById('step3').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
+    updateProgressDots(1);
+    
+    // Clear input
+    document.getElementById('calibKnownWeight').value = '';
+}
+
+// ========== STATUS MANAGEMENT ==========
+function applyStatusSnapshot(s) {
+    if (!s || typeof s !== 'object') return;
+    
+    // Weight
+    if (typeof s.weight !== 'undefined' && currentWeight !== s.weight) {
+        currentWeight = s.weight;
+        setTextIfChanged(weightEl, String(s.weight));
+    }
+    
+    // UID
+    if (typeof s.uid !== 'undefined') {
+        const u = s.uid || '';
+        if (currentUid !== u) {
+            currentUid = u;
+            setTextIfChanged(uidEl, u || t('waiting'));
+        }
+    }
+    
+    // Cloud
+    if (typeof s.cloud !== 'undefined') {
+        setCloudStatus(s.cloud);
+    }
+    
+    // API Key
+    const apiInput = document.getElementById('newApiKey');
+    if (apiInput && typeof s.apiKey === 'string' && apiKey !== s.apiKey) {
+        apiKey = s.apiKey;
+        if (apiInput.value !== apiKey) apiInput.value = apiKey;
+    }
+    
+    // API Status
+    if (typeof s.apiKey === 'string') {
+        const hasKey = s.apiKey.trim().length > 0;
+        const state = hasKey ? (s.apiValid ? 'valid' : 'invalid') : 'none';
+        setApiStatus(state, s.displayName || '');
+    }
+    
+    // Calibration factor
+    if (typeof s.calibrationFactor !== 'undefined') {
+        const n = Number(s.calibrationFactor);
+        const shown = isFinite(n) ? n.toFixed(2) : '—';
+        setTextIfChanged(calFactorEl, shown);
+        calFactor = n;
+    }
+    
+    // Uptime
+    if (typeof s.uptime_s !== 'undefined' || typeof s.uptime_ms !== 'undefined') {
+        let secs = (typeof s.uptime_s !== 'undefined') ? Number(s.uptime_s) : Number(s.uptime_ms) / 1000;
+        const upEl = document.getElementById('uptime');
+        setTextIfChanged(upEl, formatHMS(secs));
+    }
+    
+    // Send to cloud status
+    if (typeof s.sendToCloud !== 'undefined') {
+        const v = String(s.sendToCloud || '').trim();
+        if (v === '' || v === '0') {
+            setSendState('');
+        } else if (v === 'send') {
+            setSendState(t('sending'), 'rgba(255,255,255,0.2)');
+        } else if (v === 'success') {
+            setSendState(t('sent'), 'rgba(72,187,120,0.3)');
+            setTimeout(() => setSendState(''), 1500);
+        } else if (v === 'error') {
+            setSendState(t('sendError'), 'rgba(245,101,101,0.3)');
+            setTimeout(() => setSendState(''), 2000);
+        } else if (/^\d+$/.test(v)) {
+            setSendState(t('sendIn') + ' ' + v + 's', 'rgba(255,255,255,0.2)');
         }
     }
 }
 
-// --- Polling HTTP local (1 Hz) : met à jour l'UI même si WS est down ---
-// function applyStatusSnapshot(s) {
-//     // weight
-//     if (typeof s.weight !== 'undefined') {
-//         weightEl.textContent = `${s.weight} g`;
-//     }
-//     // uid
-//     if (typeof s.uid !== 'undefined') {
-//         uidEl.textContent = s.uid || 'No tag detected';
-//     }
-//     // cloud
-//     if (typeof s.cloud === 'string') {
-//         setCloudStatus(s.cloud === 'ok' ? 'connected' : s.cloud);
-//     }
-//     // apiKey (si champ présent)
-//     const apiInput = document.getElementById('newApiKey');
-//     if (apiInput && typeof s.apiKey === 'string') {
-//         apiInput.value = s.apiKey;
-//     }
-//     // calibration factor
-//     if (typeof s.calibrationFactor !== 'undefined') {
-//         const n = Number(s.calibrationFactor);
-//         calFactorEl.textContent = isFinite(n) ? n.toFixed(2) : '—';
-//     }
-// }
+function pollStatus() {
+    fetch('/api/status', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(s => applyStatusSnapshot(s))
+    .catch(() => {});
+}
 
-// function pollStatusOnce() {
-//     fetch('/api/status', { cache: 'no-store' })
-//         .then(r => r.ok ? r.json() : Promise.reject(r.status))
-//         .then(applyStatusSnapshot)
-//         .catch(() => {});
-// }
-
-// Try to pull current apiKey from device and validate once at load
-fetch('/api/status', { cache: 'no-store' })
-  .then(r => r.ok ? r.json() : Promise.reject(r.status))
-  .then(s => { if (s && typeof s.apiKey === 'string') { apiKey = s.apiKey; const inp = document.getElementById('newApiKey'); if (inp && inp.value !== apiKey) inp.value = apiKey; /* validation is handled by firmware via WS */ } })
-  .catch(() => {});
-
+// ========== INITIALIZATION ==========
 window.onload = () => {
-    connectWs();            // temps réel via WS
-//    pollStatusOnce();       // snapshot immédiat
-//    setInterval(pollStatusOnce, 1000); // mise à jour 1 Hz
+    // Set language
+    setLanguage(currentLang);
+    
+    // Initial weight display
+    setTextIfChanged(weightEl, '…');
+    
+    // Start polling
+    pollStatus();
+    setInterval(pollStatus, 1000);
+    
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registered'))
+            .catch(err => console.log('Service Worker registration failed'));
+    }
 };
 </script>
 </body>

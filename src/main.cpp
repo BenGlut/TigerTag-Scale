@@ -52,6 +52,22 @@
 void startMDNS();
 void onWiFiEvent(WiFiEvent_t event);
 
+// Unique Setup SSID + mDNS name derived from MAC
+String gSetupSsid;     // e.g. Setup-TigerScale-AB12
+String gMdnsName;      // e.g. tigerscale-AB12
+
+static String macSuffix4() {
+    uint8_t mac[6];
+    WiFi.macAddress(mac); // MAC[0]..MAC[5]
+    char suf[5]; // 4 hex chars + NUL → last 2 bytes of MAC
+    snprintf(suf, sizeof(suf), "%02X%02X", mac[4], mac[5]);
+    return String(suf);
+}
+
+static String makeSetupSSID() {
+    return String("Setup-TigerScale-") + macSuffix4();
+}
+
 // ============================================================================
 // OBJETS GLOBAUX
 // ============================================================================
@@ -73,6 +89,13 @@ bool apiValid = false;          // last known validation state
 uint32_t lastApiBroadcastMs = 0; // WS broadcast throttle for apiStatus
 float calibrationFactor = 406;
 float currentWeight = 0.0;
+// --- Hold mode variables ---
+bool holdMode = false;
+float holdWeight = 0.0f;
+uint32_t holdStartMs = 0;
+const float HOLD_THRESHOLD_ENTER = 0.5f;
+const float HOLD_THRESHOLD_EXIT = 1.5f;
+const uint32_t HOLD_TIME_MS = 700;
 String lastUID = "";       // decimal UID for API/UI
 String lastUIDHex = "";    // hex UID for logs/debug
 
@@ -86,11 +109,27 @@ const float MIN_WEIGHT_TO_SEND_G = 5.0f;    // ignore tiny weights
 const float RESEND_DELTA_G = 2.0f;          // change required to resend (g)
 const uint32_t RESEND_COOLDOWN_MS = 15000;  // minimal delay between sends (ms)
 
+// --- Reading stability / smoothing (reduce ±1g flicker; negatives still allowed) ---
+const float EMA_ALPHA   = 0.20f;   // exponential moving average factor (0.1..0.3 recommended)
+const int   MEDIAN_WINDOW = 5;     // odd number; 5 is a good trade-off
+
 // State
 float lastPushedWeight = NAN;
 uint32_t stableSinceMs = 0;
 float stableCandidate = NAN;
 uint32_t lastPushMs = 0;
+
+// --- Filters state (median + EMA) ---
+static float gEmaWeight = 0.0f;
+static bool  gEmaInit   = false;
+static float gMedianBuf[MEDIAN_WINDOW] = {0};
+static int   gMedianIdx = 0;
+static int   gMedianCount = 0; // <= MEDIAN_WINDOW
+
+// --- UI/Status for auto-send countdown & phase ---
+volatile int sendCountdown = -1;         // -1 = no countdown, >=0 = seconds remaining
+String sendPhase = "";                  // "" | "countdown" | "send" | "success" | "error"
+uint32_t sendPhaseLastChangeMs = 0;      // for expiring transient phases (success/error)
 
 // ============================================================================
 // AFFICHAGE OLED
@@ -128,6 +167,7 @@ bool checkServerHealth();
 bool pushWeightToCloud(float w);
 void handleAutoPush(float w);
 bool validateApiKeyFirmware(const String& key, String& displayNameOut);
+bool deleteApiKey();
 
 void displayWeight(float weight, const String& uid) {
     display.clearDisplay();
@@ -140,6 +180,9 @@ void displayWeight(float weight, const String& uid) {
     display.setTextSize(1);
     display.setCursor(100, 0);
     display.println(wifiConnected ? "WiFi" : "----");
+
+    // Hold mode indicator (🅗 at x=112, y=0)
+    if (holdMode) { display.setCursor(112, 0); display.print("🅗"); }
     
     // Poids au centre (grande taille) — entier uniquement
     int wInt = (int)(weight + (weight >= 0 ? 0.5f : -0.5f));
@@ -175,7 +218,7 @@ void configModeCallback(WiFiManager *myWiFiManager) {
     displayMessage(
         "CONFIG MODE",
         "Connect to WiFi",
-        "TigerScale-Setup"
+        gSetupSsid.length() ? gSetupSsid : "Setup-TigerScale"
     );
 }
 
@@ -193,8 +236,11 @@ void setupWiFi() {
     wm.setConfigPortalTimeout(180);
     
     displayMessage("Connecting to WiFi...", "Waiting...");
+    gSetupSsid = makeSetupSSID();
+    gMdnsName = String("tigerscale-") + macSuffix4();
+    WiFi.setHostname(gMdnsName.c_str());
     
-    if (!wm.autoConnect("TigerScale-Setup")) {
+    if (!wm.autoConnect(gSetupSsid.c_str())) {
         displayMessage("WiFi ERROR", "Restarting...");
         delay(3000);
         ESP.restart();
@@ -288,6 +334,27 @@ bool validateApiKeyFirmware(const String& key, String& displayNameOut) {
     return ok;
 }
 
+// Delete stored API key and display name, reset runtime flags
+bool deleteApiKey() {
+    Serial.println("[APIKEY] deleteApiKey(): begin");
+    bool removed = false;
+    bool okBegin = prefs.begin("config", false);
+    if (!okBegin) {
+        Serial.println("[APIKEY] prefs.begin('config') FAILED");
+    } else {
+        bool r1 = prefs.remove("apiKey");
+        bool r2 = prefs.remove("apiName");
+        prefs.end();
+        removed = (r1 || r2);
+        Serial.printf("[APIKEY] prefs.remove apiKey=%s apiName=%s -> removed=%s\n", r1?"true":"false", r2?"true":"false", removed?"true":"false");
+    }
+    apiKey = "";
+    apiDisplayName = "";
+    apiValid = false;
+    Serial.println("[APIKEY] deleteApiKey(): end");
+    return removed;
+}
+
 // ============================================================================
 // SERVEUR WEB & API
 // ============================================================================
@@ -367,6 +434,28 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                 client->text("{\"type\":\"apiStatus\",\"valid\":false}");
             }
         }
+        else if (strcmp(mtype, "deleteApiKey") == 0) {
+            bool ok = deleteApiKey();
+            displayMessage(ok ? "API key deleted" : "Delete failed", ok ? "Credentials cleared" : "Check storage");
+            delay(600);
+            displayWeight(currentWeight, lastUID);
+            // Inform only the requester about the result
+            {
+                StaticJsonDocument<96> out;
+                out["type"] = "deleteApiKeyResult";
+                out["success"] = ok;
+                String outStr; serializeJson(out, outStr);
+                client->text(outStr);
+            }
+            // Broadcast new API status to all clients
+            {
+                StaticJsonDocument<96> st;
+                st["type"] = "apiStatus";
+                st["valid"] = false;
+                String s; serializeJson(st, s);
+                ws.textAll(s);
+            }
+        }
     }
 }
 
@@ -377,19 +466,21 @@ void setupWebServer() {
     // ============================================
     // SERVIR FICHIERS STATIQUES DEPUIS LITTLEFS
     // ============================================
-    
-    // Page principale (index.html, fallback to .gz)
+
+    // Page principale (préférer index.html.gz si présent)
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (LittleFS.exists("/www/index.html")) {
-            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html", "text/html");
-            response->addHeader("Cache-Control", "no-store");
+        if (LittleFS.exists("/www/index.html.gz")) {
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html.gz", "text/html; charset=utf-8");
+            response->addHeader("Content-Encoding", "gzip");
+            response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+            response->addHeader("Pragma", "no-cache");
             request->send(response);
             return;
         }
-        if (LittleFS.exists("/www/index.html.gz")) {
-            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html.gz", "text/html");
-            response->addHeader("Content-Encoding", "gzip");
-            response->addHeader("Cache-Control", "no-store");
+        if (LittleFS.exists("/www/index.html")) {
+            AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html", "text/html; charset=utf-8");
+            response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+            response->addHeader("Pragma", "no-cache");
             request->send(response);
             return;
         }
@@ -473,20 +564,208 @@ void setupWebServer() {
         {
             int wInt = (int)(currentWeight + (currentWeight >= 0 ? 0.5f : -0.5f));
             json += "\"weight\":" + String(wInt) + ",";
+            // Insert rawWeight and smoothWeight after weight
+            json += "\"rawWeight\":" + String(currentWeight, 2) + ",";
+            json += "\"smoothWeight\":" + String((int)(currentWeight + (currentWeight >= 0 ? 0.5f : -0.5f))) + ",";
         }
+        // Hold mode info
+        json += "\"hold\":" + String(holdMode ? "true" : "false") + ",";
+        json += "\"holdWeight\":" + String((int)(holdWeight + (holdWeight>=0?0.5f:-0.5f))) + ",";
         json += "\"uid\":\"" + lastUID + "\",";
         json += "\"uid_hex\":\"" + lastUIDHex + "\",";
         json += "\"wifi\":\"" + WiFi.SSID() + "\",";
         json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+        json += "\"mdns\":\"" + gMdnsName + ".local\",";
         json += "\"cloud\":\"" + String(cloudOK ? "ok" : "down") + "\",";
         json += "\"apiKey\":\"" + apiKey + "\",";
         json += "\"apiValid\":" + String(apiValid ? "true" : "false") + ",";
         json += "\"displayName\":\"" + apiDisplayName + "\",";
-        json += "\"calibrationFactor\":" + String(calibrationFactor, 4);
+        json += "\"calibrationFactor\":" + String(calibrationFactor, 4) + ",";
+        json += "\"uptime_ms\":" + String(millis()) + ","; // milliseconds since boot
+        json += "\"uptime_s\":" + String(millis() / 1000) + ",";
+        // sendToCloud status: "3","2","1","send","success","error" or ""
+        String stc;
+        if (sendPhase == "countdown" && sendCountdown >= 0)       stc = String(sendCountdown);
+        else if (sendPhase == "send")                              stc = "send";
+        else if (sendPhase == "success")                           stc = "success";
+        else if (sendPhase == "error")                             stc = "error";
+        else                                                        stc = "";
+        json += "\"sendToCloud\":\"" + stc + "\"";
         json += "}";
         request->send(200, "application/json", json);
     });
+
+    // REST: set/validate API key
+    server.on("/api/apikey", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+            String body = String((const char*)data).substring(0, len);
+            // extract { "key": "..." }
+            int kp = body.indexOf("\"key\"");
+            if (kp < 0) { request->send(400, "application/json", "{\"success\":false,\"error\":\"missing key\"}"); return; }
+            int colon = body.indexOf(':', kp);
+            if (colon < 0) { request->send(400, "application/json", "{\"success\":false,\"error\":\"bad json\"}"); return; }
+            int q1 = body.indexOf('"', colon+1);
+            int q2 = (q1 >= 0) ? body.indexOf('"', q1+1) : -1;
+            if (q1 < 0 || q2 < 0) { request->send(400, "application/json", "{\"success\":false,\"error\":\"bad json\"}"); return; }
+            String newKey = body.substring(q1+1, q2);
+            newKey.trim();
+            if (newKey.length() == 0) { request->send(400, "application/json", "{\"success\":false,\"error\":\"empty key\"}"); return; }
+
+            String dn;
+            bool ok = validateApiKeyFirmware(newKey, dn);
+            if (ok) {
+                apiKey = newKey;
+                apiValid = true;
+                if (dn.length()) apiDisplayName = dn;
+                prefs.begin("config", false);
+                prefs.putString("apiKey", apiKey);
+                prefs.putString("apiName", apiDisplayName);
+                prefs.end();
+                request->send(200, "application/json", String("{\"success\":true,\"displayName\":\"") + apiDisplayName + "\"}");
+            } else {
+                apiValid = false;
+                request->send(200, "application/json", "{\"success\":false}");
+            }
+        }
+    );
+
+    // REST: delete API key
+    server.on("/api/apikey", HTTP_DELETE, [](AsyncWebServerRequest *request){
+        bool ok = deleteApiKey();
+        request->send(200, "application/json", String("{\"success\":") + (ok?"true":"false") + "}");
+    });
+    // Alias with trailing slash for robustness
+    server.on("/api/apikey/", HTTP_DELETE, [](AsyncWebServerRequest *request){
+        bool ok = deleteApiKey();
+        request->send(200, "application/json", String("{\"success\":") + (ok?"true":"false") + "}");
+    });
+    // Compatibility: allow /api/apikey?method=delete with any HTTP verb, and also handle raw DELETE here
+    server.on("/api/apikey", HTTP_ANY, [](AsyncWebServerRequest *request){
+        // If true DELETE, handle directly (guards against handler-order issues)
+        if (request->method() == HTTP_DELETE) {
+            bool ok = deleteApiKey();
+            request->send(200, "application/json", String("{\"success\":") + (ok?"true":"false") + "}");
+            return;
+        }
+        // RPC-style compatibility
+        if (request->hasParam("method")) {
+            String m = request->getParam("method")->value();
+            m.toLowerCase();
+            if (m == "delete") {
+                bool ok = deleteApiKey();
+                request->send(200, "application/json", String("{\"success\":") + (ok?"true":"false") + "}");
+                return;
+            }
+        }
+        request->send(404, "text/plain", "Not Found");
+    });
+
+    // Compatibility handler for trailing slash path as well
+    server.on("/api/apikey/", HTTP_ANY, [](AsyncWebServerRequest *request){
+        if (request->method() == HTTP_DELETE) {
+            bool ok = deleteApiKey();
+            request->send(200, "application/json", String("{\"success\":") + (ok?"true":"false") + "}");
+            return;
+        }
+        if (request->hasParam("method")) {
+            String m = request->getParam("method")->value();
+            m.toLowerCase();
+            if (m == "delete") {
+                bool ok = deleteApiKey();
+                request->send(200, "application/json", String("{\"success\":") + (ok?"true":"false") + "}");
+                return;
+            }
+        }
+        request->send(404, "text/plain", "Not Found");
+    });
+
+    // Simplified GET endpoint to delete API key (for tools that can't send DELETE)
+    server.on("/api/apikey/delete", HTTP_GET, [](AsyncWebServerRequest *request){
+        Serial.println("[APIKEY] GET /api/apikey/delete");
+        bool ok = deleteApiKey();
+        if (ok) {
+            request->send(200, "application/json", "{\"success\":true}");
+        } else {
+            request->send(200, "application/json", "{\"success\":false}");
+        }
+    });
+
+    // Diagnostic endpoint: replies before attempting deletion, to debug transport vs deletion issues
+    server.on("/api/apikey/delete-test", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "application/json", "{\"ok\":true}\n");
+        // Perform deletion after sending (for debugging potential response path issues)
+        bool ok = deleteApiKey();
+        Serial.printf("[APIKEY] delete-test post-send result=%s\n", ok?"true":"false");
+    });
+
+    // Ultra-simple endpoint as requested: http://<ip>/apikeydelete
+    server.on("/apikeydelete", HTTP_GET, [](AsyncWebServerRequest *request){
+        bool ok = deleteApiKey();
+        request->send(200, "text/plain", ok ? "ok" : "fail");
+    });
+
+    // Simple ping endpoint to diagnose transport issues
+    server.on("/api/ping", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "text/plain", "pong");
+    });
     
+    // REST: set weight (send to cloud) — expects { weight, uid? }
+    server.on("/api/weight", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+        [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+            String body = String((const char*)data).substring(0, len);
+            // extract weight number
+            int wp = body.indexOf("weight");
+            if (wp < 0) { request->send(400, "application/json", "{\"error\":\"missing weight\"}"); return; }
+            int colon = body.indexOf(':', wp);
+            if (colon < 0) { request->send(400, "application/json", "{\"error\":\"bad json\"}"); return; }
+            String num = body.substring(colon+1);
+            num.trim();
+            while (num.length() && (num[num.length()-1] < '0' || num[num.length()-1] > '9') && num[num.length()-1] != '.') num.remove(num.length()-1);
+            while (num.length() && ((num[0] < '0' || num[0] > '9') && num[0] != '-' && num[0] != '.')) num.remove(0,1);
+            float w = num.toFloat();
+            int wi = (int)(w + (w >= 0 ? 0.5f : -0.5f));
+            if (w <= 0 && num.indexOf('0') != 0 && num.indexOf('.') != 0) { request->send(400, "application/json", "{\"error\":\"invalid weight\"}"); return; }
+
+            // optional uid override
+            String uidOverride = lastUID;
+            int up = body.indexOf("\"uid\"");
+            if (up >= 0) {
+                int c2 = body.indexOf(':', up);
+                int uq1 = (c2 >= 0) ? body.indexOf('"', c2+1) : -1;
+                int uq2 = (uq1 >= 0) ? body.indexOf('"', uq1+1) : -1;
+                if (uq1 >= 0 && uq2 > uq1) uidOverride = body.substring(uq1+1, uq2);
+            }
+
+            if (apiKey.length() == 0) { request->send(400, "application/json", "{\"error\":\"missing apiKey\"}"); return; }
+            if (uidOverride.length() == 0) { request->send(400, "application/json", "{\"error\":\"missing uid (present a tag)\"}"); return; }
+
+            HTTPClient http;
+            const char* url = "https://us-central1-tigertag-connect.cloudfunctions.net/setSpoolWeightByRfid";
+            if (!http.begin(url)) { request->send(500, "application/json", "{\"error\":\"http begin failed\"}"); return; }
+            http.addHeader("Content-Type", "application/json");
+            http.addHeader("x-api-key", apiKey);
+            String payload = String("{\"uid\":\"") + uidOverride + "\",\"weight\":" + String(wi) + "}";
+            int code = http.POST(payload);
+            String resp = http.getString();
+            http.end();
+
+            if (code >= 200 && code < 300) {
+                currentWeight = (float)wi;
+                displayMessage("Synced \xE2\x9C\x93", String(wi) + " g", "to cloud");
+                delay(700);
+                lastUID = "";
+                lastPushedWeight = NAN;
+                stableSinceMs = 0;
+                stableCandidate = NAN;
+                displayWeight(currentWeight, lastUID);
+                request->send(200, "application/json", "{\"status\":\"ok\"}");
+            } else {
+                String err = String("{\"error\":\"upstream ") + code + "\",\"body\":" + '"' + resp + '"' + "}";
+                request->send(502, "application/json", err);
+            }
+        }
+    );
+
     server.on("/api/push-weight", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
         [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
             String body = String((const char*)data).substring(0, len);
@@ -548,7 +827,8 @@ void setupWebServer() {
         [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
             String body = String((const char*)data).substring(0, len);
             int p = body.indexOf("factor");
-            if (p < 0) { request->send(400, "application/json", "{\"error\":\"missing factor\"}"); return; }
+            if (p < 0) p = body.indexOf("value");
+            if (p < 0) { request->send(400, "application/json", "{\"error\":\"missing factor/value\"}"); return; }
             int colon = body.indexOf(':', p);
             if (colon < 0) { request->send(400, "application/json", "{\"error\":\"bad json\"}"); return; }
             String num = body.substring(colon+1); num.trim();
@@ -568,6 +848,7 @@ void setupWebServer() {
     
     // Page 404
     server.onNotFound([](AsyncWebServerRequest *request) {
+        Serial.printf("[404] %s %s\n", request->method() == HTTP_GET ? "GET" : request->method() == HTTP_POST ? "POST" : request->method() == HTTP_DELETE ? "DELETE" : request->method() == HTTP_PUT ? "PUT" : "OTHER", request->url().c_str());
         request->send(404, "text/plain", "404 Not Found");
     });
     
@@ -600,29 +881,61 @@ bool pushWeightToCloud(float w) {
 void handleAutoPush(float w) {
     const uint32_t now = millis();
 
-    if (w < MIN_WEIGHT_TO_SEND_G) { stableSinceMs = 0; stableCandidate = NAN; return; }
-    if (apiKey.length() == 0 || lastUID.length() == 0 || !WiFi.isConnected()) { return; }
-
-    if (isnan(stableCandidate)) {
-        stableCandidate = w;
-        stableSinceMs = now;
+    // Reset transient success/error after 1.5s
+    if ((sendPhase == "success" || sendPhase == "error") && (now - sendPhaseLastChangeMs > 1500)) {
+        sendPhase = "";
+        sendCountdown = -1;
     }
 
-    if (fabs(w - stableCandidate) > STABLE_EPSILON_G) {
-        stableCandidate = w;
-        stableSinceMs = now;
+    // Preconditions to consider any auto-send
+    if (w < MIN_WEIGHT_TO_SEND_G || apiKey.length() == 0 || lastUID.length() == 0 || !WiFi.isConnected()) {
+        sendPhase = "";            // idle
+        sendCountdown = -1;
+        stableSinceMs = 0;
+        stableCandidate = NAN;
         return;
     }
 
-    if (now - stableSinceMs < STABLE_WINDOW_MS) return;
+    // Initialize stability tracking
+    if (isnan(stableCandidate)) {
+        stableCandidate = w;
+        stableSinceMs = now;
+        sendPhase = "countdown";
+        // initial countdown (ceil to next second)
+        int remMs = (int)STABLE_WINDOW_MS;
+        sendCountdown = (remMs + 999) / 1000; // e.g., 1500ms -> 2
+    }
 
+    // If value deviates beyond epsilon, restart stability window
+    if (fabs(w - stableCandidate) > STABLE_EPSILON_G) {
+        stableCandidate = w;
+        stableSinceMs = now;
+        sendPhase = "countdown";
+        int remMs = (int)STABLE_WINDOW_MS;
+        sendCountdown = (remMs + 999) / 1000;
+        return;
+    }
+
+    // Update countdown while within the stability window
+    uint32_t elapsed = now - stableSinceMs;
+    if (elapsed < STABLE_WINDOW_MS) {
+        int remMs = (int)(STABLE_WINDOW_MS - elapsed);
+        int newCount = (remMs + 999) / 1000;
+        if (newCount != sendCountdown) sendCountdown = newCount; // 3..2..1 style
+        return;
+    }
+
+    // Past stability window: consider cooldown/delta rules
     if (!isnan(lastPushedWeight)) {
         if (fabs(w - lastPushedWeight) < RESEND_DELTA_G) return;
         if (now - lastPushMs < RESEND_COOLDOWN_MS) return;
     }
 
-    displayMessage("Sending...", String("UID ") + lastUID, String(w, 1) + " g");
+    // Ready to send
+    sendPhase = "send";
+    sendCountdown = 0;
 
+    displayMessage("Sending...", String("UID ") + lastUID, String(w, 1) + " g");
     bool ok = pushWeightToCloud(w);
     if (ok) {
         int wInt = (int)(w + (w >= 0 ? 0.5f : -0.5f));
@@ -638,10 +951,16 @@ void handleAutoPush(float w) {
         snprintf(buf, sizeof(buf), "{\"weight\":%d,\"uid\":\"%s\"}", wInt, lastUID.c_str());
         ws.textAll(buf);
         displayWeight((float)wInt, lastUID);
+        sendPhase = "success";
+        sendPhaseLastChangeMs = millis();
+        sendCountdown = -1;
     } else {
         displayMessage("Sync failed", "Check Wi‑Fi/API", String(w, 1) + " g");
         delay(700);
         displayWeight(w, lastUID);
+        sendPhase = "error";
+        sendPhaseLastChangeMs = millis();
+        sendCountdown = -1;
     }
 }
 
@@ -653,9 +972,9 @@ void startMDNS() {
     MDNS.end();
     delay(50);
     if (WiFi.isConnected()) {
-        if (MDNS.begin(MDNS_NAME)) {
+        if (MDNS.begin(gMdnsName.c_str())) {
             MDNS.addService("http", "tcp", 80);
-            Serial.println("[mDNS] started: http://" + String(MDNS_NAME) + ".local");
+            Serial.println("[mDNS] started: http://" + gMdnsName + ".local");
         } else {
             Serial.println("[mDNS] start failed");
         }
@@ -699,11 +1018,34 @@ void setupScale() {
 }
 
 float readWeight() {
-    if (scale.is_ready()) {
-        currentWeight = scale.get_units(5);
-        return currentWeight;
+    if (!scale.is_ready()) {
+        return currentWeight; // keep last value if ADC not ready
     }
-    return 0.0;
+
+    // 1) Fast raw read (low latency)
+    float raw = scale.get_units(1);
+
+    // 2) Update small median window
+    gMedianBuf[gMedianIdx] = raw;
+    gMedianIdx = (gMedianIdx + 1) % MEDIAN_WINDOW;
+    if (gMedianCount < MEDIAN_WINDOW) gMedianCount++;
+
+    // Compute median (tiny N → insertion sort)
+    float tmp[MEDIAN_WINDOW];
+    for (int i = 0; i < gMedianCount; ++i) tmp[i] = gMedianBuf[i];
+    for (int i = 1; i < gMedianCount; ++i) {
+        float key = tmp[i]; int j = i - 1;
+        while (j >= 0 && tmp[j] > key) { tmp[j+1] = tmp[j]; j--; }
+        tmp[j+1] = key;
+    }
+    float med = (gMedianCount > 0) ? tmp[gMedianCount/2] : raw;
+
+    // 3) Exponential moving average for extra smoothing
+    if (!gEmaInit) { gEmaWeight = med; gEmaInit = true; }
+    else { gEmaWeight = gEmaWeight + EMA_ALPHA * (med - gEmaWeight); }
+
+    currentWeight = gEmaWeight; // smoothed float (can be negative)
+    return currentWeight;
 }
 
 // ============================================================================
@@ -828,7 +1170,7 @@ void setup() {
     displayMessage(
         "READY!",
         "IP: " + WiFi.localIP().toString(),
-        "tigerscale.local",
+        gMdnsName + ".local",
         "Place an Spool.."
     );
 }
@@ -849,10 +1191,33 @@ void loop() {
     }
     
     float weight = readWeight();
+
+    // --- Hold mode logic ---
+    float displayedWeight = weight;
+    if (!holdMode) {
+        if (fabs(weight - holdWeight) < HOLD_THRESHOLD_ENTER) {
+            if (holdStartMs == 0) holdStartMs = millis();
+            if (millis() - holdStartMs > HOLD_TIME_MS) {
+                holdMode = true;
+                holdWeight = weight;
+            }
+        } else {
+            holdStartMs = 0;
+            holdWeight = weight;
+        }
+    } else {
+        if (fabs(weight - holdWeight) > HOLD_THRESHOLD_EXIT) {
+            holdMode = false;
+            holdStartMs = 0;
+            holdWeight = weight;
+        }
+    }
+    displayedWeight = holdMode ? holdWeight : weight;
+
     if (millis() - lastUpdate > WS_UPDATE_INTERVAL_MS) {
-        displayWeight(weight, lastUID);
+        displayWeight(displayedWeight, lastUID);
         
-        int wInt = (int)(weight + (weight >= 0 ? 0.5f : -0.5f));
+        int wInt = (int)(displayedWeight + (displayedWeight >= 0 ? 0.5f : -0.5f));
         String json = "{\"weight\":" + String(wInt) + 
                       ",\"uid\":\"" + lastUID + "\"}";
         ws.textAll(json);

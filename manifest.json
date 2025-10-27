@@ -6,7 +6,8 @@
     "parts": [
       { "path": "firmware/bootloader.bin", "offset": 4096 },
       { "path": "firmware/partitions.bin", "offset": 32768 },
-      { "path": "firmware/app.bin",        "offset": 65536 }
+      { "path": "firmware/app.bin",        "offset": 65536 },
+      { "path": "firmware/littlefs.bin",   "offset": 3211264 }
     ]
   }]
 }

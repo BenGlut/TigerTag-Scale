@@ -135,6 +135,8 @@ uint32_t sendPhaseLastChangeMs = 0;      // for expiring transient phases (succe
 // AFFICHAGE OLED
 // ============================================================================
 
+// 🔎 OLED Display: Utility to show multi-line status/info messages on the SSD1306 screen.
+//    Used for user feedback, errors, and setup states.
 void displayMessage(String line1, String line2 = "", String line3 = "", String line4 = "") {
     display.clearDisplay();
     display.setTextSize(1);
@@ -161,6 +163,8 @@ void displayMessage(String line1, String line2 = "", String line3 = "", String l
     display.display();
 }
 
+// 🔎 OLED Display: Shows the current weight and RFID UID, plus WiFi status, on the OLED.
+//    This function is called frequently to update the main UI shown to the user.
 void displayWeight(float weight, const String& uid = "");
 
 bool checkServerHealth();
@@ -169,6 +173,8 @@ void handleAutoPush(float w);
 bool validateApiKeyFirmware(const String& key, String& displayNameOut);
 bool deleteApiKey();
 
+// 🔎 OLED Display: Main function for rendering weight and tag info on the OLED.
+//    Shows WiFi status, weight (large digits), UID, and device IP.
 void displayWeight(float weight, const String& uid) {
     display.clearDisplay();
     
@@ -227,6 +233,9 @@ void saveConfigCallback() {
     delay(800);
 }
 
+// 🔎 WiFiManager: Handles WiFi configuration and captive portal using WiFiManager.
+//    This enables easy setup via a smartphone/laptop without hardcoding credentials.
+//    After connection, sets up mDNS and checks cloud health.
 void setupWiFi() {
     WiFiManagerParameter custom_api_key("apikey", "API Key (optionnel)", apiKey.c_str(), 64);
     
@@ -273,6 +282,39 @@ void setupWiFi() {
 // LITTLEFS : Initialisation et debug
 // ============================================================================
 
+// Recursive directory listing
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+  File root = fs.open(dirname);
+  if(!root){
+    Serial.printf("❌ [LITTLEFS] Failed to open dir: %s\n", dirname);
+    return;
+  }
+  if(!root.isDirectory()){
+    Serial.printf("❌ [LITTLEFS] Not a dir: %s\n", dirname);
+    return;
+  }
+  Serial.printf("📁 [LITTLEFS] Listing: %s\n", dirname);
+  File file = root.openNextFile();
+  while(file){
+    if(file.isDirectory()){
+      Serial.printf("DIR  %s\n", file.name());
+      if (levels){
+        String sub = String(file.name());
+        listDir(fs, sub.c_str(), levels - 1);
+      }
+    } else {
+      Serial.printf("FILE %s (%u)\n", file.name(), (unsigned)file.size());
+    }
+    file = root.openNextFile();
+  }
+}
+
+// ============================================
+// SERVIR FICHIERS STATIQUES DEPUIS LITTLEFS
+// ============================================
+// 🔎 LittleFS Initialization: Mounts the internal filesystem to serve web UI and assets.
+//    The /www directory contains all static web content (HTML, CSS, JS, images).
+//    This allows the ESP32 to serve a rich web interface directly from flash.
 void setupFileSystem() {
     Serial.println("\n[LITTLEFS] Initialisation...");
     
@@ -285,21 +327,15 @@ void setupFileSystem() {
     
     Serial.println("✅ [LITTLEFS] Monté avec succès");
     
-    // Debug : lister les fichiers disponibles
+    // Debug : vérifier /www existe
     File root = LittleFS.open("/www");
     if (!root) {
         Serial.println("⚠️  [LITTLEFS] Dossier /www introuvable!");
         Serial.println("    → Uploadez le filesystem: pio run --target uploadfs");
         return;
     }
-    
-    Serial.println("\n📂 [LITTLEFS] Fichiers dans /www/:");
-    File file = root.openNextFile();
-    while (file) {
-        Serial.printf("   📄 %s (%d bytes)\n", file.name(), file.size());
-        file = root.openNextFile();
-    }
-    Serial.println();
+    // Recursive listing including /www/img etc.
+    listDir(LittleFS, "/www", 3);
 }
 
 // Validate API key against TigerTag CDN (firmware-side)
@@ -459,15 +495,19 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     }
 }
 
+// ============================================
+// SERVEUR WEB & API
+// ============================================
 void setupWebServer() {
     ws.onEvent(onWsEvent);
     server.addHandler(&ws);
     
-    // ============================================
-    // SERVIR FICHIERS STATIQUES DEPUIS LITTLEFS
-    // ============================================
 
+    // ============================================
     // Page principale (préférer index.html.gz si présent)
+    // ============================================
+    // 🔎 Routing: Serve index.html(.gz) for root, with no-cache headers for fast dev iteration.
+    //    Tries .gz first for compressed transfer. Caching is disabled for HTML to ensure the UI updates immediately after changes.
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (LittleFS.exists("/www/index.html.gz")) {
             AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/index.html.gz", "text/html; charset=utf-8");
@@ -488,6 +528,8 @@ void setupWebServer() {
     });
     
     // CSS (style.css, fallback to .gz), cache 24h
+    // 🔎 Routing: Serve CSS, prefer uncompressed for debugging, fallback to .gz.
+    //    Caching enabled (24h) as CSS changes infrequently.
     server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (LittleFS.exists("/www/style.css")) {
             AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/style.css", "text/css");
@@ -504,8 +546,11 @@ void setupWebServer() {
         }
         request->send(404, "text/plain", "style.css(.gz) not found");
     });
+    server.serveStatic("/styles.css", LittleFS, "/www/styles.css").setCacheControl("no-store");
     
     // JavaScript (app.js, fallback to .gz), no-store
+    // 🔎 Routing: Serve JavaScript, prefer uncompressed for debugging, fallback to .gz.
+    //    Caching disabled (no-store) to ensure new code is always loaded.
     server.on("/app.js", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (LittleFS.exists("/www/app.js")) {
             AsyncWebServerResponse *response = request->beginResponse(LittleFS, "/www/app.js", "application/javascript");
@@ -522,10 +567,13 @@ void setupWebServer() {
         }
         request->send(404, "text/plain", "app.js(.gz) not found");
     });
+    server.serveStatic("/script.js", LittleFS, "/www/script.js").setCacheControl("no-store");
     
-    // ============================================
-    // API ENDPOINTS (inchangés)
-    // ============================================
+    // Static mapping for images (explicit, cache-safe during dev)
+    // 🔎 Routing: Serve static image assets from /www/img.
+    //    Cache disabled (no-store) for development; can be set to long-term cache in production.
+    server.serveStatic("/img", LittleFS, "/www/img")
+          .setCacheControl("no-store");
     
     server.on("/api/config", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
         [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {

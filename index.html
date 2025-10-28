@@ -934,25 +934,53 @@
         flag.innerHTML = supported
           ? '<span class="badge ok">✓ Compatible Web Serial</span>'
           : '<span class="badge danger">✕ Incompatible browser (use Chrome or Edge on desktop)</span>';
-        // Vérifier la présence du manifest et des binaires
+        // Vérifier la présence des manifests et des binaires (App+UI & Full)
         const status = document.getElementById('fwcheck');
+        const list = document.getElementById('fwlist');
         try {
-          const res = await fetch('manifest.json', { cache: 'no-store' });
-          if (!res.ok) throw new Error('manifest not found');
-          const m = await res.json();
-          const parts = (m.builds?.[0]?.parts)||[];
-          const checks = await Promise.all(parts.map(async p => {
-            const r = await fetch(p.path, { method: 'HEAD', cache: 'no-store' });
-            return { path: p.path, ok: r.ok };
-          }));
-          const okAll = checks.every(c => c.ok);
-          status.innerHTML = okAll
-            ? '<span class="badge ok">✅ Firmware ready</span>'
-            : '<span class="badge warn">⚠️ Firmware incomplete</span>';
-          const list = document.getElementById('fwlist');
-          list.innerHTML = checks.map(c => `<li class="mono">${c.ok ? '✅' : '❌'} ${c.path}</li>`).join('');
+          const manifests = [
+            { name: 'App+UI', file: 'manifest-update-firmware.json' },
+            { name: 'Full',   file: 'manifest-full-reset.json' }
+          ];
+
+          const results = [];
+          for (const m of manifests) {
+            const res = await fetch(m.file, { cache: 'no-store' });
+            if (!res.ok) {
+              results.push({ name: m.name, file: m.file, ok: false, parts: [], error: 'manifest missing' });
+              continue;
+            }
+            const json = await res.json();
+            const parts = (json.builds?.[0]?.parts) || [];
+            const checks = await Promise.all(parts.map(async p => {
+              const r = await fetch(p.path, { method: 'HEAD', cache: 'no-store' });
+              return { path: p.path, ok: r.ok };
+            }));
+            const okAll = checks.every(c => c.ok);
+            results.push({ name: m.name, file: m.file, ok: okAll, parts: checks });
+          }
+
+          status.innerHTML = results.map(r =>
+            r.ok
+              ? `<span class="badge ok">✅ ${r.name} ready</span>`
+              : `<span class="badge warn">⚠️ ${r.name} incomplete</span>`
+          ).join(' ');
+
+          const items = [];
+          for (const r of results) {
+            items.push(`<li class="mono"><strong>${r.name}</strong> — ${r.file}</li>`);
+            if (r.parts.length) {
+              for (const p of r.parts) {
+                items.push(`<li class="mono" style="margin-left:14px">${p.ok ? '✅' : '❌'} ${p.path}</li>`);
+              }
+            } else {
+              items.push(`<li class="mono" style="margin-left:14px">❌ manifest missing or no parts</li>`);
+            }
+          }
+          list.innerHTML = items.join('');
         } catch (e) {
-          status.innerHTML = '<span class="badge danger">❌ manifest.json missing</span>';
+          status.innerHTML = '<span class="badge danger">❌ manifest check failed</span>';
+          list.innerHTML = `<li class="mono">Error: ${e?.message || e}</li>`;
         }
       }
       window.addEventListener('DOMContentLoaded', init);
@@ -1038,8 +1066,20 @@
           </div>
         </div>
 
-        <div class="center">
-          <esp-web-install-button manifest="manifest.json"></esp-web-install-button>
+        <div class="center" style="flex-direction: column; gap: 14px;">
+          <!-- Safe update: App only (keeps Wi‑Fi + API key in NVS) -->
+          <div>
+            <esp-web-install-button manifest="manifest-update-firmware.json"></esp-web-install-button>
+          </div>
+          <!-- Full install: Boot+Partitions+App+LittleFS -->
+          <div>
+            <esp-web-install-button manifest="manifest-full-reset.json"></esp-web-install-button>
+          </div>
+        </div>
+
+        <div class="small" style="text-align:center; opacity:0.9; margin-top:8px;">
+          <div><strong>App only</strong> = met à jour l'application <em>sans effacer</em> la configuration (Wi‑Fi, clé API) stockée en NVS.</div>
+          <div><strong>Full install</strong> = flashe bootloader, partitions, app et UI LittleFS (utiliser seulement si nécessaire).</div>
         </div>
 
         <div class="callout small">

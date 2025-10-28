@@ -427,6 +427,50 @@
       .step-content {
         flex: 1;
       }
+
+      /* Install Cards */
+      .install-cards {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+        margin: 12px 0 6px 0;
+      }
+      @media (min-width: 720px) {
+        .install-cards { grid-template-columns: 1fr 1fr; }
+      }
+      .install-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(139, 92, 246, 0.06) 100%);
+        border: 2px solid rgba(102, 126, 234, 0.25);
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        text-align: center;
+      }
+      [data-theme="dark"] .install-card {
+        border-color: rgba(148, 163, 184, 0.25);
+        background: rgba(148, 163, 184, 0.06);
+      }
+      .install-card h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--card-text);
+      }
+      .install-card p {
+        margin: 0;
+        font-size: 14px;
+        color: #64748b;
+      }
+      [data-theme="dark"] .install-card p {
+        color: var(--muted);
+      }
+      .install-card .hint {
+        font-size: 12px;
+        opacity: 0.9;
+      }
       
       /* Bill of Materials - Shopping Cart */
       .cart-cta {
@@ -1066,20 +1110,19 @@
           </div>
         </div>
 
-        <div class="center" style="flex-direction: column; gap: 14px;">
-          <!-- Safe update: App only (keeps Wi‑Fi + API key in NVS) -->
-          <div>
+        <div class="install-cards">
+          <div class="install-card">
+            <h3>App+UI Only</h3>
+            <p>Updates the application <em>and</em> the web interface.</p>
+            <p class="hint">Keeps Wi‑Fi &amp; API key (stored in NVS).</p>
             <esp-web-install-button manifest="manifest-update-firmware.json"></esp-web-install-button>
           </div>
-          <!-- Full install: Boot+Partitions+App+LittleFS -->
-          <div>
+          <div class="install-card">
+            <h3>Full Install</h3>
+            <p>Flashes bootloader, partitions, app and UI (factory‑style).</p>
+            <p class="hint">Use only if the standard update fails.</p>
             <esp-web-install-button manifest="manifest-full-reset.json"></esp-web-install-button>
           </div>
-        </div>
-
-        <div class="small" style="text-align:center; opacity:0.9; margin-top:8px;">
-          <div><strong>App only</strong> = met à jour l'application <em>sans effacer</em> la configuration (Wi‑Fi, clé API) stockée en NVS.</div>
-          <div><strong>Full install</strong> = flashe bootloader, partitions, app et UI LittleFS (utiliser seulement si nécessaire).</div>
         </div>
 
         <div class="callout small">

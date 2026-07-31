@@ -15,6 +15,11 @@
 > Building one today? Build a V3:
 > **[repository](https://github.com/TigerTag-Project/Tiger-Scale-V3)** ·
 > **[install it from your browser](https://tigertag-project.github.io/Tiger-Scale-V3/)**
+>
+> **This repository is archived and read-only, so its issue tracker is closed.**
+> If you run a V2 and hit a problem, come to
+> **[Discord](https://discord.gg/3Qv5TSqnJH)** — that is where V2 questions are
+> still answered. Everything here stays readable, cloneable and forkable.
 
 > **Open-source IoT weighing scale for 3D printer filament spools**, with RFID tag detection, OLED display, automatic spool tracking, and TigerTag cloud sync.
 

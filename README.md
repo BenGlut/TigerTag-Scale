@@ -1,5 +1,21 @@
 # 🐯 TigerScale — Smart RFID Filament Scale
 
+> [!IMPORTANT]
+> **This is the end of the V2 line. It is no longer being developed.**
+>
+> Work has moved to **[TigerScale V3](https://github.com/TigerTag-Project/Tiger-Scale-V3)**,
+> which is different hardware — an ESP32-S3 with a 3.5" colour touchscreen and two
+> PN532 readers. **The two firmwares are not interchangeable**: this one will not
+> run on a V3 board, and the V3 firmware will not run on yours.
+>
+> Nothing here stops working. The web installer, the documentation and the
+> releases stay online, and a V2 you already built keeps talking to the TigerTag
+> cloud exactly as before. What it will not get is new features or new releases.
+>
+> Building one today? Build a V3:
+> **[repository](https://github.com/TigerTag-Project/Tiger-Scale-V3)** ·
+> **[install it from your browser](https://tigertag-project.github.io/Tiger-Scale-V3/)**
+
 > **Open-source IoT weighing scale for 3D printer filament spools**, with RFID tag detection, OLED display, automatic spool tracking, and TigerTag cloud sync.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
